@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<component name="org.nuxeo.labs.hyland.knowledge.enrichment.service">
+
+  <implementation class="org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIServiceImpl" />
+
+  <service>
+    <provide interface="org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIService" />
+  </service>
+</component>

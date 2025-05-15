@@ -1,0 +1,61 @@
+services:
+
+  mongodb:
+    image: mongo:6.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  opensearch:
+    image: opensearchproject/opensearch:1.3.17
+    hostname: opensearch
+    restart: always
+    healthcheck:
+      test: curl -f http://opensearch:9200/
+      interval: 2m
+      timeout: 30s
+      retries: 10
+      start_period: 1m
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - cluster.name=opensearch
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "DISABLE_SECURITY_PLUGIN=true"
+    volumes:
+      - os_data:/usr/share/opensearch/data
+
+  nuxeo:
+    image: nuxeo-hyland-knowledge-enrichment-connector:2023.3.0-SNAPSHOT
+    env_file:
+      - ./.env
+    ports:
+      - "8080:8080"
+      - "8787:8787"
+    environment:
+      - JAVA_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8787
+      - NUXEO_DEV=true
+      - NUXEO_PACKAGES=nuxeo-web-ui ${NUXEO_PACKAGES}
+      - NUXEO_CLID=${NUXEO_CLID}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}
+      - AWS_CREDENTIAL_EXPIRATION=${AWS_CREDENTIAL_EXPIRATION}
+      - AWS_REGION=${AWS_REGION}
+    hostname: nuxeo
+    restart: always
+    depends_on:
+      - mongodb
+      - opensearch
+    volumes:
+      - ./conf.d:/etc/nuxeo/conf.d
+      - nuxeo_data:/var/lib/nuxeo
+
+volumes:
+  nuxeo_data: {}
+  os_data:
+  mongodb_data:
+

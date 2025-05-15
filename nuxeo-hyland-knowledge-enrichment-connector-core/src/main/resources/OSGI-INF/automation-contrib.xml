@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<component name="org.nuxeo.labs.hyland.knowledge.enrichment.automation">
+
+    <extension point="operations" target="org.nuxeo.ecm.core.operation.OperationServiceComponent">
+        <operation class="org.nuxeo.labs.hyland.knowledge.enrichment.automation.HylandCIInvokeOp"/>
+        <operation class="org.nuxeo.labs.hyland.knowledge.enrichment.automation.HylandCIEnrichOp"/>
+    </extension>
+
+    <extension target="org.nuxeo.ecm.core.operation.OperationServiceComponent" point="contextHelpers">
+        <contextHelper id="Base64Helper" class="org.nuxeo.labs.hyland.knowledge.enrichment.automation.function.Base64Function"/>
+    </extension>
+
+</component>

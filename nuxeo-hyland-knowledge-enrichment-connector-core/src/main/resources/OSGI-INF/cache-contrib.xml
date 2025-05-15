@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<component name="org.nuxeo.labs.hyland.knowledge.enrichment.cache">
+    <extension target="org.nuxeo.ecm.core.cache.CacheService" point="caches">
+        <cache name="content_intelligence_cache">
+            <ttl>60</ttl>
+            <option name="maxSize">1000</option>
+            <option name="concurrencyLevel">500</option>
+        </cache>
+    </extension>
+</component>
