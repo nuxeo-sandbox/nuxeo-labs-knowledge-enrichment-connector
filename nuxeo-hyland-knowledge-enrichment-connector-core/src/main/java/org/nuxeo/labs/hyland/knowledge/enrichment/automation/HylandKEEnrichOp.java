@@ -51,9 +51,6 @@ public class HylandKEEnrichOp {
     @Param(name = "similarMetadata", required = false)
     protected String similarMetadata;
 
-    @Param(name = "useCache", required = false)
-    protected boolean useCache = false;
-
     @Context
     protected HylandKEService ciService;
 
