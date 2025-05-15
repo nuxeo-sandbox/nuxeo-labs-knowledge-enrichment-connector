@@ -20,15 +20,12 @@
 package org.nuxeo.labs.hyland.knowledge.enrichment.service;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -60,9 +57,9 @@ import org.nuxeo.runtime.model.DefaultComponent;
  *   6. Get results (loop to check when done)
  * 
  */
-public class HylandCIServiceImpl extends DefaultComponent implements HylandCIService {
+public class HylandKEServiceImpl extends DefaultComponent implements HylandKEService {
 
-    private static final Logger log = LogManager.getLogger(HylandCIServiceImpl.class);
+    private static final Logger log = LogManager.getLogger(HylandKEServiceImpl.class);
 
     public static final String ENRICHMENT_CLIENT_ID_PARAM = "nuxeo.hyland.cic.enrichment.clientId";
 
@@ -124,7 +121,7 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
         ENRICHMENT, DATA_CURATION
     }
 
-    public HylandCIServiceImpl() {
+    public HylandKEServiceImpl() {
         initialize();
     }
 
@@ -209,9 +206,7 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
 
     }
 
-    // TODO
-    // This method should not be public. Made public for quick unit test.
-    public String fetchAuthTokenIfNeeded(CICService service) {
+    protected String fetchAuthTokenIfNeeded(CICService service) {
 
         // TODO
         // Use a synchronize to make sure 2 simultaneous calls stay OK
@@ -431,21 +426,8 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
     }
 
     public String invokeEnrichment(String httpMethod, String endpoint, String jsonPayload) {
-        return invokeEnrichment(httpMethod, endpoint, jsonPayload, false);
-    }
-
-    public String invokeEnrichment(String httpMethod, String endpoint, String jsonPayload, boolean useCache) {
 
         String response = null;
-
-        if (useCache) {
-            CacheService cacheService = Framework.getService(CacheService.class);
-            Cache cache = cacheService.getCache(CONTENT_INTELL_CACHE);
-            String cacheKey = getCacheKey(httpMethod, endpoint, jsonPayload);
-            if (cache.hasEntry(cacheKey)) {
-                return (String) cache.get(cacheKey);
-            }
-        }
 
         httpMethod = httpMethod.toUpperCase();
         // Sanitycheck
@@ -514,12 +496,6 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
                     }
                     response = buildJsonResponseString(finalResponse.toString(), responseCode,
                             conn.getResponseMessage());
-
-                    if (useCache) {
-                        CacheService cacheService = Framework.getService(CacheService.class);
-                        Cache cache = cacheService.getCache(CONTENT_INTELL_CACHE);
-                        cache.put(getCacheKey(httpMethod, endpoint, jsonPayload), response);
-                    }
                 }
             } else {
                 response = buildJsonResponseString("{}", responseCode, conn.getResponseMessage());
@@ -555,26 +531,13 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
      * Not to be used, these APIs and the server will be removed/shutdown at some point.
      */
     public String invokeObsoleteQuickDemo(String endpoint, String jsonPayload) {
-        return invokeObsoleteQuickDemo(endpoint, jsonPayload, false);
-    }
-
-    public String invokeObsoleteQuickDemo(String endpoint, String jsonPayload, boolean useCache) {
 
         String response = null;
 
-        if (useCache) {
-            CacheService cacheService = Framework.getService(CacheService.class);
-            Cache cache = cacheService.getCache(CONTENT_INTELL_CACHE);
-            String cacheKey = getCacheKey("POST", endpoint, jsonPayload);
-            if (cache.hasEntry(cacheKey)) {
-                return (String) cache.get(cacheKey);
-            }
-        }
-
         // Get config parameter values for URL to call, authentication, etc.
-        String targetUrl = Framework.getProperty(HylandCIService.CONTENT_INTELL_URL_PARAM);
-        String authenticationHeaderName = Framework.getProperty(HylandCIService.CONTENT_INTELL_HEADER_NAME_PARAM);
-        String authenticationHeaderValue = Framework.getProperty(HylandCIService.CONTENT_INTELL_HEADER_VALUE_PARAM);
+        String targetUrl = Framework.getProperty(HylandKEService.CONTENT_INTELL_URL_PARAM);
+        String authenticationHeaderName = Framework.getProperty(HylandKEService.CONTENT_INTELL_HEADER_NAME_PARAM);
+        String authenticationHeaderValue = Framework.getProperty(HylandKEService.CONTENT_INTELL_HEADER_VALUE_PARAM);
 
         if (!endpoint.startsWith("/")) {
             targetUrl += "/";
@@ -628,12 +591,6 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
                     response = responseJson.toString();
                 } catch (JSONException e) {
                     // Ouch. This is not JSON, let it as it is
-                }
-
-                if (useCache) {
-                    CacheService cacheService = Framework.getService(CacheService.class);
-                    Cache cache = cacheService.getCache(CONTENT_INTELL_CACHE);
-                    cache.put(getCacheKey("POST", endpoint, jsonPayload), response);
                 }
             }
 
@@ -713,10 +670,6 @@ public class HylandCIServiceImpl extends DefaultComponent implements HylandCISer
 
         int responseCode = conn.getResponseCode();
         return responseCode;
-    }
-
-    public static String getCacheKey(String httpMethod, String endpoint, String jsonPayload) {
-        return httpMethod + endpoint + (jsonPayload == null ? "nopayload" : jsonPayload);
     }
 
 }

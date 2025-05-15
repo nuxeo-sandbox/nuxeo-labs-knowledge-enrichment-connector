@@ -21,6 +21,7 @@ package org.nuxeo.labs.hyland.knowledge.enrichment.test;
 
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.ecm.automation.test.AutomationFeature;
@@ -36,7 +37,9 @@ import java.io.IOException;
 
 @RunWith(FeaturesRunner.class)
 @Features({AutomationFeature.class})
-@Deploy("nuxeo-hyland-content-intelligence-connector-core")
+@Deploy("nuxeo-hyland-knowledge-enrichment-connector-core")
+// @Ignore, see automation-contrib.xml
+@Ignore
 public class TestBase64Function {
 
     @Test

@@ -32,15 +32,15 @@ import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
-import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIService;
+import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
 
-@Operation(id = HylandCIEnrichOp.ID, category = "Hyland Content Intelligence", label = "CIC Knowledge Enrichement on Blob", description = ""
-        + "Invoke the Hyland Content Intelligence API to enrich the blob. actions is a list of action to process"
+@Operation(id = HylandKEEnrichOp.ID, category = "Hyland Knowledge Enrichment", label = "CIC Knowledge Enrichement on Blob", description = ""
+        + "Invoke the Hyland Knwoledge Enrichment (KE) API to enrich the blob. actions is a list of actions to process"
         + " (image-description, image-embeddings, …), classes a list of values to be used for classification,"
-        + " and similarValues is used for metadata endpoint ")
-public class HylandCIEnrichOp {
+        + " and similarValues is used for metadata endpoint. (See KE documentation for details, limitation, etc.)")
+public class HylandKEEnrichOp {
 
-    public static final String ID = "HylandContentIntelligence.Enrich";
+    public static final String ID = "HylandKnowledgeEnrichment.Enrich";
 
     @Param(name = "actions", required = true)
     protected String actions;
@@ -55,29 +55,23 @@ public class HylandCIEnrichOp {
     protected boolean useCache = false;
 
     @Context
-    protected HylandCIService ciService;
+    protected HylandKEService ciService;
 
     @OperationMethod
     public Blob run(Blob blob) {
 
-        List<String> theActions= Arrays.stream(actions.split(","))
-                                       .map(String::trim)
-                                       .toList();
+        List<String> theActions = Arrays.stream(actions.split(",")).map(String::trim).toList();
 
         List<String> theClasses = null;
         if (StringUtils.isNotBlank(classes)) {
-            theClasses = Arrays.stream(classes.split(","))
-                               .map(String::trim)
-                               .toList();
+            theClasses = Arrays.stream(classes.split(",")).map(String::trim).toList();
         }
-        
+
         List<String> theSimilarMetadata = null;
         if (StringUtils.isNotBlank(similarMetadata)) {
-            theSimilarMetadata = Arrays.stream(similarMetadata.split(","))
-                                       .map(String::trim)
-                                       .toList();
+            theSimilarMetadata = Arrays.stream(similarMetadata.split(",")).map(String::trim).toList();
         }
-        
+
         String response;
         try {
             response = ciService.enrich(blob, theActions, theClasses, theSimilarMetadata);

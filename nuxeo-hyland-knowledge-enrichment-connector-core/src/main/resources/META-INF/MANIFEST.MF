@@ -1,10 +1,10 @@
 Bundle-ActivationPolicy: lazy
 Bundle-ClassPath: .
 Manifest-Version: 1.0
-Bundle-Vendor: org.nuxeo.labs.hyland.content.intelligence
+Bundle-Vendor: org.nuxeo.labs.hyland.knowledge.enrichment
 Bundle-Version: 1.0.0
-Bundle-Name: nuxeo-hyland-content-intelligence-connector-core
+Bundle-Name: nuxeo-hyland-knowledge-enrichment-connector-core
 Bundle-ManifestVersion: 2
-Bundle-SymbolicName: nuxeo-hyland-content-intelligence-connector-core;singleton=true
+Bundle-SymbolicName: nuxeo-hyland-knowledge-enrichment-connector-core;singleton=true
 Nuxeo-Component: OSGI-INF/service-contrib.xml, OSGI-INF/automation-contrib.xml,
     OSGI-INF/cache-contrib.xml

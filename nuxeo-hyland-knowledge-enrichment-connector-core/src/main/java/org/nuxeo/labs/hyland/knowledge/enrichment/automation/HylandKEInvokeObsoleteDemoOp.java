@@ -25,13 +25,13 @@ import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
 import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
-import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIService;
+import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
 
-@Operation(id = HylandCIInvokeOp.ID, category = "Hyland Content Intelligence", label = "Invoke Hyland Content Intelligence and return the JSON response as a blob",
-        description = "Invoke the Hyland Content Intelligence API")
-public class HylandCIInvokeOp {
+@Operation(id = HylandKEInvokeObsoleteDemoOp.ID, category = "Hyland Knowledge Enrichment", label = "Invoke Hyland Knowledge Enrichment and return the JSON response as a blob",
+        description = "Invoke the Hyland Content Intelligence/Knowledge Enrichment API")
+public class HylandKEInvokeObsoleteDemoOp {
 
-    public static final String ID = "HylandContentIntelligence.Invoke";
+    public static final String ID = "HylandKnowledgeEnrichment.Invoke";
 
     @Param(name = "endpoint", required = true)
     protected String endpoint;
@@ -39,15 +39,12 @@ public class HylandCIInvokeOp {
     @Param(name = "jsonPayload", required = true)
     protected String jsonPayload;
 
-    @Param(name = "useCache", required = false)
-    protected boolean useCache = false;
-
     @Context
-    protected HylandCIService ciService;
+    protected HylandKEService ciService;
 
     @OperationMethod
     public Blob run() {
-        String response = ciService.invokeObsoleteQuickDemo(endpoint, jsonPayload, useCache);
+        String response = ciService.invokeObsoleteQuickDemo(endpoint, jsonPayload);
         return new StringBlob(response, "application/json");
     }
 

@@ -22,94 +22,53 @@ package org.nuxeo.labs.hyland.knowledge.enrichment.test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIServiceImpl.CONTENT_INTELL_CACHE;
-import static org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIServiceImpl.getCacheKey;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import java.io.File;
+import java.util.List;
+
+import javax.inject.Inject;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.nuxeo.ecm.core.cache.Cache;
-import org.nuxeo.ecm.core.cache.CacheService;
 import org.nuxeo.ecm.platform.test.PlatformFeature;
-import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIService;
-import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIServiceImpl;
-import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIServiceImpl.CICService;
-import org.nuxeo.runtime.api.Framework;
+import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
+import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEServiceImpl;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
-import javax.inject.Inject;
-import java.io.File;
-import java.io.IOException;
-import java.util.Base64;
-import java.util.List;
-
 @RunWith(FeaturesRunner.class)
 @Features({ PlatformFeature.class, ConfigCheckerFeature.class })
-@Deploy("nuxeo-hyland-content-intelligence-connector-core")
-public class TestHylandCIService {
-
-    private static final Logger log = LogManager.getLogger(TestHylandCIService.class);
+@Deploy("nuxeo-hyland-knowledge-enrichment-connector-core")
+public class TestHylandKEService {
 
     protected static final String TEST_IMAGE_PATH = "/files/dc-3-smaller.jpg";
 
     protected static final String TEST_IMAGE_MIMETYPE = "image/jpeg";
 
-    protected static final String TEST_IMAGE_DESCRIPTION = "The image contains several iconic Disney characters,"
-            + " including Goofy, Daisy Duck, and Mickey Mouse. "
-            + "There is no human face visible in the image. The image appears to be a stylized, minimalist"
-            + " representation of these classic cartoon characters. The characters are depicted as simple"
-            + " line drawings in a limited color palette of black, white, yellow, and red.Goofy is shown with"
-            + " his signature large ears and mouth, while Daisy Duck is recognizable by her distinctive red bow."
-            + " Mickey Mouse is depicted as a minimalist silhouette, capturing his iconic rounded shape and ears."
-            + " This seems to be an artistic rendering or logo design featuring these beloved Disney characters,"
-            + " rather than a scene from a specific show or movie.";
-
-    protected static String testImageBase64 = null;
-
     @Inject
-    protected HylandCIService hylandCIService;
+    protected HylandKEService hylandKEService;
 
     @Before
     public void onceExecutedBeforeAll() throws Exception {
 
-        if (testImageBase64 == null) {
-            byte[] fileContent = FileUtils.readFileToByteArray(
-                    new File(getClass().getResource(TEST_IMAGE_PATH).getPath()));
-            testImageBase64 = Base64.getEncoder().encodeToString(fileContent);
-        }
+        // Actually, nothing to do here.
     }
 
     @Test
     public void testServiceIsDeployed() {
-        assertNotNull(hylandCIService);
-    }
-
-    @Test
-    public void quickTestToBeReworked() {
-
-        Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
-
-        HylandCIServiceImpl sce = (HylandCIServiceImpl) hylandCIService;
-        // Quick test. This methig should not be public
-        String token = sce.fetchAuthTokenIfNeeded(CICService.ENRICHMENT);
-        assertNotNull(token);
+        assertNotNull(hylandKEService);
     }
 
     @Test
     public void shouldReturn404OnBadEndPoint() {
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
-        String result = hylandCIService.invokeEnrichment("GET", "/INVALID_END_POINT", null);
+        String result = hylandKEService.invokeEnrichment("GET", "/INVALID_END_POINT", null);
 
         assertNotNull(result);
         JSONObject resultJson = new JSONObject(result);
@@ -123,7 +82,7 @@ public class TestHylandCIService {
 
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
-        String result = hylandCIService.invokeEnrichment("GET", "/api/content/process/actions", null);
+        String result = hylandKEService.invokeEnrichment("GET", "/api/content/process/actions", null);
 
         assertNotNull(result);
         JSONObject resultJson = new JSONObject(result);
@@ -141,7 +100,7 @@ public class TestHylandCIService {
 
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
-        String result = hylandCIService.invokeEnrichment("GET",
+        String result = hylandKEService.invokeEnrichment("GET",
                 "/api/files/upload/presigned-url?contentType=" + TEST_IMAGE_MIMETYPE.replace("/", "%2F"), null);
         assertNotNull(result);
         JSONObject resultJson = new JSONObject(result);
@@ -153,7 +112,7 @@ public class TestHylandCIService {
         assertNotNull(result);
 
         String presignedUrl = response.getString("presignedUrl");
-        assertNotNull(result);
+        assertNotNull(presignedUrl);
 
         String objectKey = response.getString("objectKey");
         assertNotNull(objectKey);
@@ -164,7 +123,7 @@ public class TestHylandCIService {
     public void shouldGetImageDescription() throws Exception {
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
-        HylandCIServiceImpl sce = (HylandCIServiceImpl) hylandCIService;
+        HylandKEServiceImpl sce = (HylandKEServiceImpl) hylandKEService;
 
         File f = new File(getClass().getResource(TEST_IMAGE_PATH).getPath());
         String result = sce.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-description"), null, null);
@@ -217,7 +176,7 @@ public class TestHylandCIService {
 
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
-        HylandCIServiceImpl sce = (HylandCIServiceImpl) hylandCIService;
+        HylandKEServiceImpl sce = (HylandKEServiceImpl) hylandKEService;
 
         File f = new File(getClass().getResource(TEST_IMAGE_PATH).getPath());
         String result = sce.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-embeddings"), null, null);
@@ -246,7 +205,7 @@ public class TestHylandCIService {
 
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
-        HylandCIServiceImpl sce = (HylandCIServiceImpl) hylandCIService;
+        HylandKEServiceImpl sce = (HylandKEServiceImpl) hylandKEService;
 
         File f = new File(getClass().getResource(TEST_IMAGE_PATH).getPath());
         String result = sce.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-classification"),
@@ -274,11 +233,11 @@ public class TestHylandCIService {
     }
 
     @Test
-    public void shouldGetSeveralStuffOnImage() throws Exception {
+    public void shouldGetSeveralEnrichmentsOnImage() throws Exception {
 
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
-        HylandCIServiceImpl sce = (HylandCIServiceImpl) hylandCIService;
+        HylandKEServiceImpl sce = (HylandKEServiceImpl) hylandKEService;
 
         File f = new File(getClass().getResource(TEST_IMAGE_PATH).getPath());
         String result = sce.enrich(f, TEST_IMAGE_MIMETYPE,

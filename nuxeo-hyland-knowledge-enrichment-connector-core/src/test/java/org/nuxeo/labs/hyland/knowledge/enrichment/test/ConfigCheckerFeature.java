@@ -26,8 +26,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.runtime.test.runner.RunnerFeature;
 
-import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIService;
-import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIServiceImpl;
+import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
+import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEServiceImpl;
 
 /**
  * Check the misc expected config parameters are set so a call to Hyland Content Intelligence
@@ -92,9 +92,9 @@ public class ConfigCheckerFeature implements RunnerFeature {
 
         systemProps = System.getProperties();
 
-        boolean hasEnrichmentClientId = hasProperty(HylandCIServiceImpl.ENRICHMENT_CLIENT_ID_PARAM,
+        boolean hasEnrichmentClientId = hasProperty(HylandKEServiceImpl.ENRICHMENT_CLIENT_ID_PARAM,
                 ENV_CIC_ENRICHMENT_CLIENT_ID);
-        boolean hasEnrichmentClientSecret = hasProperty(HylandCIServiceImpl.ENRICHMENT_CLIENT_SECRET_PARAM,
+        boolean hasEnrichmentClientSecret = hasProperty(HylandKEServiceImpl.ENRICHMENT_CLIENT_SECRET_PARAM,
                 ENV_CIC_ENRICHMENT_CLIENT_SECRET);
         hasEnrichmentClientInfo = hasEnrichmentClientId && hasEnrichmentClientSecret;
         if (!hasEnrichmentClientInfo) {
@@ -102,9 +102,9 @@ public class ConfigCheckerFeature implements RunnerFeature {
             System.out.println(msg);
         }
 
-        boolean hasDataCurationClientId = hasProperty(HylandCIServiceImpl.DATA_CURATION_CLIENT_ID_PARAM,
+        boolean hasDataCurationClientId = hasProperty(HylandKEServiceImpl.DATA_CURATION_CLIENT_ID_PARAM,
                 ENV_CIC_DATA_CURATION_CLIENT_ID);
-        boolean hasDataCurationClientSecret = hasProperty(HylandCIServiceImpl.DATA_CURATION_CLIENT_SECRET_PARAM,
+        boolean hasDataCurationClientSecret = hasProperty(HylandKEServiceImpl.DATA_CURATION_CLIENT_SECRET_PARAM,
                 ENV_CIC_DATA_CURATION_CLIENT_SECRET);
         hasDataCurationClientInfo = hasDataCurationClientId && hasDataCurationClientSecret;
         if (!hasDataCurationClientInfo) {
@@ -113,9 +113,9 @@ public class ConfigCheckerFeature implements RunnerFeature {
         }
 
         // The obsolete stuff still used in quick tests
-        boolean hasUrl = hasProperty(HylandCIService.CONTENT_INTELL_URL_PARAM, ENV_URL);
-        boolean hasheaderName = hasProperty(HylandCIService.CONTENT_INTELL_HEADER_NAME_PARAM, ENV_HEADER_NAME);
-        boolean hasHeaderValue = hasProperty(HylandCIService.CONTENT_INTELL_HEADER_VALUE_PARAM, ENV_HEADER_VALUE);
+        boolean hasUrl = hasProperty(HylandKEService.CONTENT_INTELL_URL_PARAM, ENV_URL);
+        boolean hasheaderName = hasProperty(HylandKEService.CONTENT_INTELL_HEADER_NAME_PARAM, ENV_HEADER_NAME);
+        boolean hasHeaderValue = hasProperty(HylandKEService.CONTENT_INTELL_HEADER_VALUE_PARAM, ENV_HEADER_VALUE);
         hasObsoleteQuickDemoInfo = hasUrl && hasheaderName && hasHeaderValue;
         if (!hasObsoleteQuickDemoInfo) {
             String msg = "OBSOLETE QUICK DEMO TEST: Missing at least a parameter to connect to Hyland Content Intelligence, ";

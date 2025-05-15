@@ -21,38 +21,31 @@ package org.nuxeo.labs.hyland.knowledge.enrichment.test;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIServiceImpl.CONTENT_INTELL_CACHE;
-import static org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIServiceImpl.getCacheKey;
+
+import java.io.File;
+import java.util.Base64;
+
+import javax.inject.Inject;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
-import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.nuxeo.ecm.core.cache.Cache;
-import org.nuxeo.ecm.core.cache.CacheService;
 import org.nuxeo.ecm.platform.test.PlatformFeature;
-import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIService;
-import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIServiceImpl;
-import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandCIServiceImpl.CICService;
-import org.nuxeo.runtime.api.Framework;
+import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 
-import javax.inject.Inject;
-import java.io.File;
-import java.util.Base64;
-
 @RunWith(FeaturesRunner.class)
 @Features({ PlatformFeature.class, ConfigCheckerFeature.class })
-@Deploy("nuxeo-hyland-content-intelligence-connector-core")
+@Deploy("nuxeo-hyland-knowledge-enrichment-connector-core")
 /**
  * This class will be removed once quick tests are done.
  * 
@@ -75,7 +68,7 @@ public class TestHylandCIServiceQuickDemo {
     protected static String testImageBase64 = null;
 
     @Inject
-    protected HylandCIService hylandCIService;
+    protected HylandKEService hylandCIService;
 
     @Before
     public void onceExecutedBeforeAll() throws Exception {
@@ -319,52 +312,6 @@ public class TestHylandCIServiceQuickDemo {
     @Test
     public void testGetImageEmbedding() throws Exception {
 
-    }
-
-    @Test
-    public void testResponseCaching() {
-
-        Assume.assumeTrue(ConfigCheckerFeature.hasObsoleteQuickDemoInfo());
-
-        String endpoint = "/description";
-
-        String payload = String.format("""
-                {
-                    "type" : "base64",
-                    "media_type": "image/png",
-                    "override_request": "",
-                    "data": "%s"
-                }
-                """, testImageBase64);
-
-        String response = hylandCIService.invokeObsoleteQuickDemo(endpoint, payload, true);
-        assertNotNull(response);
-
-        CacheService cacheService = Framework.getService(CacheService.class);
-        Cache cache = cacheService.getCache(CONTENT_INTELL_CACHE);
-        assertTrue(cache.hasEntry(HylandCIServiceImpl.getCacheKey("POST", endpoint, payload)));
-    }
-
-    @Test
-    public void testCacheHit() {
-
-        Assume.assumeTrue(ConfigCheckerFeature.hasObsoleteQuickDemoInfo());
-
-        String endpoint = "the endpoint that don't exist yet";
-        String payload = """
-                {
-                    "inputText":"Let's see some magic"
-                }"
-                """;
-
-        String cachedResponse = "123";
-
-        CacheService cacheService = Framework.getService(CacheService.class);
-        Cache cache = cacheService.getCache(CONTENT_INTELL_CACHE);
-        cache.put(getCacheKey("POST", endpoint, payload), cachedResponse);
-
-        String response = hylandCIService.invokeObsoleteQuickDemo(endpoint, payload, true);
-        Assert.assertEquals(cachedResponse, response);
     }
 
     public static String getTestImageDescription() {

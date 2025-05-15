@@ -25,20 +25,32 @@ import java.util.List;
 
 import org.nuxeo.ecm.core.api.Blob;
 
-public interface HylandCIService {
+public interface HylandKEService {
 
     // Kind of Low-level calls
+    /**
+     * Call the KE service, using the configuration parameters (clientId, clientSecret,URLs, …)
+     * <br>
+     * The method handles the authentication token and its expiration time.
+     * <br>
+     * <code>jsonPayload</code> may be null, and its content depends on the <code>endpoint</code> used.
+     * <br>
+     * <code>endpoint</code> are documented here: https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment/ContextEnrichmentAPI
+     * 
+     * @param httpMethod
+     * @param endpoint
+     * @param jsonPayload
+     * @return
+     * @since 2023
+     */
     public String invokeEnrichment(String httpMethod, String endpoint, String jsonPayload);
-
-    public String invokeEnrichment(String httpMethod, String endpoint, String jsonPayload, boolean useCache);
 
     // High level, does all the call chain for you (get token, get presigned URL, etc. etc.)
     public String enrich(Blob blob, List<String> actions, List<String> classes, List<String> similarMetadata)
             throws IOException;
 
-    public String enrich(File file, String mimeType, List<String> actions, List<String> classes, List<String> similarMetadata)
-            throws IOException;
-
+    public String enrich(File file, String mimeType, List<String> actions, List<String> classes,
+            List<String> similarMetadata) throws IOException;
 
     // ====================================================================================================
     /*
@@ -52,7 +64,5 @@ public interface HylandCIService {
     public static final String CONTENT_INTELL_HEADER_VALUE_PARAM = "nuxeo.hyland.content.intelligence.authenticationHeaderValue";
 
     public String invokeObsoleteQuickDemo(String endpoint, String jsonPayload);
-
-    public String invokeObsoleteQuickDemo(String endpoint, String jsonPayload, boolean useCache);
     // ====================================================================================================
 }
