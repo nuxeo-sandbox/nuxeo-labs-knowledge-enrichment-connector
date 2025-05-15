@@ -1,6 +1,6 @@
 <!-- See documentation at http://doc.nuxeo.com/x/HgIz -->
-<package type="addon" name="nuxeo-hyland-knowledge-enrichment-connector" version="@VERSION@">
-  <title>Nuxeo Hyland Knowledge Enrichment Connector</title>
+<package type="addon" name="nuxeo-labs-knowledge-enrichment-connector" version="@VERSION@">
+  <title>Nuxeo Labs Knowledge Enrichment Connector</title>
   <description>
     <p>A connector for Hyland Knowledge Enrichment</p>
   </description>

@@ -1,4 +1,4 @@
-<project name="nuxeo-hyland-knowledge-enrichment-connector" default="build" xmlns:nx="urn:nuxeo-build" xmlns:artifact="urn:nuxeo-artifact">
+<project name="nuxeo-labs-knowledge-enrichment-connector" default="build" xmlns:nx="urn:nuxeo-build" xmlns:artifact="urn:nuxeo-artifact">
   <taskdef resource="org/nuxeo/build/antlib.xml" uri="urn:nuxeo-build" />
   <taskdef resource="org/nuxeo/build/artifact/antlib.xml" uri="urn:nuxeo-artifact" />
   <taskdef resource="net/sf/antcontrib/antlib.xml" />
@@ -129,8 +129,12 @@
       <fileset dir="${outdir}/marketplace/install/bundles" />
     </nx:studioExtraction>
 
+    <!--
     <zip destfile="${outdir}/${maven.project.artifactId}-${maven.project.version}.zip" basedir="${outdir}/marketplace" />
     <artifact:attach file="${outdir}/${maven.project.artifactId}-${maven.project.version}.zip" type="zip" />
+    -->
+    <zip destfile="${outdir}/nuxeo-labs-knowledge-enrichment-connector-${maven.project.version}.zip" basedir="${outdir}/marketplace" />
+    <artifact:attach file="${outdir}/nuxeo-labs-knowledge-enrichment-connector-${maven.project.version}.zip" type="zip" />
 
     <!-- cleanups -->
     <delete dir="${outdir}/marketplace" failonerror="false" />

@@ -1,4 +1,4 @@
-# nuxeo-hyland-knowledge-enrichment-connector
+# nuxeo-labs-knowledge-enrichment-connector
 
 A plugin that connects to [**Hyland Content Intelligence**](https://www.hyland.com/en/solutions/products/hyland-content-intelligence) and leverages its [**Knowledge Enrichment**](https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment) APIs.
 
@@ -11,7 +11,7 @@ The plugin provides two kinds of operations handling the calls to the service (s
 * A high-level operation, `HylandKnowledgeEnrichment.Enrich` that performs all the different individual calls required to get the enrichement for a blob: Get a presigned URL, then upload the file, etc. 
 
 > [!NOTE]
-> The plugin always handle the authentication token, you never need to handle it (see below)
+> The plugin handles the authentication token, you never need to handle it (see below).
 
 
 ## Usage
@@ -29,9 +29,9 @@ The returned JSON is formated as follow:
     {
         "id": String, the ID of the response
         "timestamp": String, the date of the response
-        "status": String, "SUCCESS", "FAIULURE" or "PARTIAL_FAILURE"
+        "status": String, "SUCCESS", "FAILURE" or "PARTIAL_FAILURE"
         "results": An array of response, with only one element for now:
-            [
+        [
             {
                 "objectKey": String, the object key (as returned by the getPresignedUrl endpoint),
                 "imageDescription": {
@@ -44,29 +44,45 @@ The returned JSON is formated as follow:
                 },
                 . . . etc . . .
             }
-            ]
+        ]
     }
 }
 ```
-For details about each result, please see the Knowledge Enrichment API and schemas. You can also look at some unit tests in the plugin.
+For details about each result, please see the Knowledge Enrichment API and schemas. You can also look at some unit tests in the plugin and some examples below.
 
-**You should always check the `responseCode` is 200** before trying to get other fields.
 
-[To be continued]]
+> [!IMPORTANT]
+> **You should always check the `responseCode` is 200** before trying to get other fields.
 
+See example of automation script(s) below
 
 
 ### Nuxeo Configuration Parameters
 
-[To Be Done]
+For calling the service, you need to setup configuration parameters in nuxeo.conf. The plugin provides some default values, but it is recommanded to set all the values so as to make sure your call to the service will work as expected.
+
+* `nuxeo.hyland.cic.endpoint.auth`: The authentication endpoint. A default value is provided if this parameter is empty.
+* `nuxeo.hyland.cic.endpoint.contextEnrichment`: The enricgment endpoint. A default value is provided if this parameter is empty.
+* `nuxeo.hyland.cic.endpoint.dataCuration`: The Data Curation endpoint. A default value is provided if this parameter is empty.
+* `nuxeo.hyland.cic.enrichment.clientId`: Your enrichment clientId
+* `nuxeo.hyland.cic.enrichment.clientSecret`: Your enrichment client secret
+* `nuxeo.hyland.cic.datacuration.clientId`: Your data curation clientId
+* `nuxeo.hyland.cic.datacuration.clientSecret`: Your data curation client secret
+
+Other parameters are used to tune the behavior:
+* As of now, getting the results is asynchronous and we need to poll and check if they are ready. The following parameters are used in a loop, where if the service does not return HTTP Code 200, the thread sleeps a certain time then tries again, until a certain number of tries:
+  * `nuxeo.hyland.cic.pullResultsMaxTries`, an intergern max number of tries. Default value is `10`.
+  * `nuxeo.hyland.cic.pullResultsSleepIntervall`: an integer, the sleep value in milliseconds. Default value is 3000
+  
+  So, with these default values, the code will try maximum 10 times and it will take about 30s max.
 
 ### The ... Operation
 
-[To Be Done]
+[To Be Continued]
 
 ### Example
 
-[To Be Done]
+[To Be Continued]
 
 ## How to build
 ```bash
@@ -77,7 +93,11 @@ mvn clean install
 
 You can add the `-DskipDocker` flag to skip building with Docker.
 
-Also you can use the `-DskipTests` flag
+Also you can use the `-DskipTests` flag.
+
+> [!NOTE]
+> The Marketplace Package ID is `nuxeo-labs-knowledge-enrichment-connector`, not `nuxeo-hyland-knowledge-enrichment-connector`
+
 
 ### How to UnitTest
 
