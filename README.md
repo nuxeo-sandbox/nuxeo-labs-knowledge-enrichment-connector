@@ -53,7 +53,6 @@ For details about each result, please see the Knowledge Enrichment API and schem
 **You should always check the `responseCode` is 200** before trying to get other fields.
 
 [To be continued]]
-```
 
 
 
