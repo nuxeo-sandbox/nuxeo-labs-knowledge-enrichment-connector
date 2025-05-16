@@ -31,7 +31,7 @@ import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
         description = "Invoke the Hyland Content Intelligence/Knowledge Enrichment API")
 public class HylandKEInvokeObsoleteDemoOp {
 
-    public static final String ID = "HylandKnowledgeEnrichment.Invoke";
+    public static final String ID = "HylandKnowledgeEnrichment.InvokeObsoleteDemo";
 
     @Param(name = "endpoint", required = true)
     protected String endpoint;
