@@ -34,6 +34,7 @@ import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.nuxeo.common.utils.FileUtils;
 import org.nuxeo.ecm.platform.test.PlatformFeature;
 import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
 import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEServiceImpl;
@@ -46,7 +47,9 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 @Deploy("nuxeo-hyland-knowledge-enrichment-connector-core")
 public class TestHylandKEService {
 
-    protected static final String TEST_IMAGE_PATH = "/files/dc-3-smaller.jpg";
+    protected static final String TEST_IMAGE_PATH = "files/dc-3-smaller.jpg";
+
+    protected static final String TEST_CONTRACT_PATH = "files/samplecontract.pdf";
 
     protected static final String TEST_IMAGE_MIMETYPE = "image/jpeg";
 
@@ -123,10 +126,8 @@ public class TestHylandKEService {
     public void shouldGetImageDescription() throws Exception {
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
-        HylandKEServiceImpl sce = (HylandKEServiceImpl) hylandKEService;
-
-        File f = new File(getClass().getResource(TEST_IMAGE_PATH).getPath());
-        String result = sce.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-description"), null, null);
+        File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
+        String result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-description"), null, null);
         assertNotNull(result);
 
         JSONObject resultJson = new JSONObject(result);
@@ -176,10 +177,8 @@ public class TestHylandKEService {
 
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
-        HylandKEServiceImpl sce = (HylandKEServiceImpl) hylandKEService;
-
-        File f = new File(getClass().getResource(TEST_IMAGE_PATH).getPath());
-        String result = sce.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-embeddings"), null, null);
+        File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
+        String result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-embeddings"), null, null);
         assertNotNull(result);
 
         JSONObject resultJson = new JSONObject(result);
@@ -205,10 +204,8 @@ public class TestHylandKEService {
 
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
-        HylandKEServiceImpl sce = (HylandKEServiceImpl) hylandKEService;
-
-        File f = new File(getClass().getResource(TEST_IMAGE_PATH).getPath());
-        String result = sce.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-classification"),
+        File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
+        String result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-classification"),
                 List.of("Disney", "DC Comics", "Marvel"), null);
         assertNotNull(result);
 
@@ -237,10 +234,8 @@ public class TestHylandKEService {
 
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
-        HylandKEServiceImpl sce = (HylandKEServiceImpl) hylandKEService;
-
-        File f = new File(getClass().getResource(TEST_IMAGE_PATH).getPath());
-        String result = sce.enrich(f, TEST_IMAGE_MIMETYPE,
+        File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
+        String result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE,
                 List.of("image-description", "image-embeddings", "image-classification"),
                 List.of("Disney", "DC Comics", "Marvel"), null);
         assertNotNull(result);
@@ -282,6 +277,52 @@ public class TestHylandKEService {
         // So far the service returns the value lowercase anyway (which is a problem if the list of values are from a
         // vocabulary)
         assertEquals("disney", classification.toLowerCase());
+    }
+    
+    @Test
+    public void shouldGetDataCuration() throws Exception {
+
+        Assume.assumeTrue(ConfigCheckerFeature.hasDataCurationClientInfo());
+        
+        File f = FileUtils.getResourceFileFromContext(TEST_CONTRACT_PATH);
+        
+        // No embeddings
+        // schema MDATS - FULL - PIPELINE. See https://hyland.github.io/DocumentFilters-Docs/latest/getting_started_with_document_filters/about_json_output.html#json_output_schema
+        String options = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": false, \"json_schema\": \"MDAST\"}";
+        String result = hylandKEService.curate(f, options);
+        assertNotNull(result);
+        
+        File file = new File("/Users/thibaud.arguillere/Desktop/output-MDAST.json");
+        org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
+        
+        
+        options = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": false, \"json_schema\": \"FULL\"}";
+        result = hylandKEService.curate(f, options);
+        assertNotNull(result);
+        file = new File("/Users/thibaud.arguillere/Desktop/output-FULL.json");
+        org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
+        
+        
+        options = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": false, \"json_schema\": \"PIPELINE\"}";
+        result = hylandKEService.curate(f, options);
+        assertNotNull(result);
+        file = new File("/Users/thibaud.arguillere/Desktop/output-PIPELINE.json");
+        org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
+        
+        
+        
+        
+        
+        
+        
+
+        JSONObject resultJson = new JSONObject(result);
+
+        // Expecting HTTP OK
+        assertEquals(200, resultJson.getInt("responseCode"));
+
+        JSONObject response = resultJson.getJSONObject("response");
+        assertNotNull(response);
     }
 
 }

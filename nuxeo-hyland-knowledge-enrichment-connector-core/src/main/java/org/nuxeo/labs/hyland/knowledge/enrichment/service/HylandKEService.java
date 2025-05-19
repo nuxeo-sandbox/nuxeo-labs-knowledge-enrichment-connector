@@ -35,7 +35,8 @@ public interface HylandKEService {
      * <br>
      * <code>jsonPayload</code> may be null, and its content depends on the <code>endpoint</code> used.
      * <br>
-     * <code>endpoint</code> are documented here: https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment/ContextEnrichmentAPI
+     * <code>endpoint</code> are documented here:
+     * https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment/ContextEnrichmentAPI
      * 
      * @param httpMethod
      * @param endpoint
@@ -51,6 +52,19 @@ public interface HylandKEService {
 
     public String enrich(File file, String mimeType, List<String> actions, List<String> classes,
             List<String> similarMetadata) throws IOException;
+
+    /**
+     * Implementation should provide default values is jsonOptions is null or ""
+     * 
+     * @param blob
+     * @param jsonOptions
+     * @return
+     * @throws IOException
+     * @since TODO
+     */
+    public String curate(Blob blob, String jsonOptions) throws IOException;
+
+    public String curate(File file, String jsonOptions) throws IOException;
 
     // ====================================================================================================
     /*

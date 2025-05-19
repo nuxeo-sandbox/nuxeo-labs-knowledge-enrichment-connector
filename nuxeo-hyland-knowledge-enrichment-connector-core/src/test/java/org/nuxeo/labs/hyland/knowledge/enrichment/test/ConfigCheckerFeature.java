@@ -113,7 +113,7 @@ public class ConfigCheckerFeature implements RunnerFeature {
                 ENV_CIC_ENRICHMENT_CLIENT_ID);
         boolean hasEnrichmentClientSecret = hasProperty(HylandKEServiceImpl.ENRICHMENT_CLIENT_SECRET_PARAM,
                 ENV_CIC_ENRICHMENT_CLIENT_SECRET);
-        hasEnrichmentClientInfo = hasEnrichmentClientId && hasEnrichmentClientSecret;
+        hasEnrichmentClientInfo = hasEndpointAuth && hasEndpointEnrichment && hasEnrichmentClientId && hasEnrichmentClientSecret;
         if (!hasEnrichmentClientInfo) {
             System.out.println("Missing CIC Enrichment Client info => no tests of enricvhment");
         }
@@ -126,7 +126,7 @@ public class ConfigCheckerFeature implements RunnerFeature {
                 ENV_CIC_DATA_CURATION_CLIENT_ID);
         boolean hasDataCurationClientSecret = hasProperty(HylandKEServiceImpl.DATA_CURATION_CLIENT_SECRET_PARAM,
                 ENV_CIC_DATA_CURATION_CLIENT_SECRET);
-        hasDataCurationClientInfo = hasDataCurationClientId && hasDataCurationClientSecret;
+        hasDataCurationClientInfo = hasEndpointAuth && hasEndpointDataCuration && hasDataCurationClientId && hasDataCurationClientSecret;
         if (!hasDataCurationClientInfo) {
             System.out.println("Missing CIC Data Curation Client info => no tests of data curation");
         }

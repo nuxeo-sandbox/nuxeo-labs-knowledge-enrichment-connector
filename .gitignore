@@ -30,3 +30,4 @@ bin/
 *.bak
 *~gen
 .env
+nashorn_code_cache
