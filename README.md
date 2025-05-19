@@ -16,8 +16,10 @@ The plugin provides two kinds of operations handling the calls to the service (s
 
 ## Usage
 
-1. Setup the configuration parameters required by the plugin
-2. From Nuxeo Studio, create an Automation Script that calls the operation(s), then handle the JSON result. From this result, you will typically save values in fields.
+1. Have a valid application on Content Intelligence Cloud/Content Innovation Cloud. also look at its documentation. You need valid endpoints (authentication, content intelligence, data curation), and valid clientId and clientSecret.
+
+2. Setup the configuration parameters required by the plugin
+3. From Nuxeo Studio, create an Automation Script that calls the operation(s), then handle the JSON result. From this result, you will typically save values in fields.
 
 The returned JSON is formated as follow. It encapsulates a couple information about the call to the service (HTTP Result code) and the response as returned by the service. This response is returned "as is", no modification is applied by the plugin, and it is stored the `"response"` property of the result.
 
@@ -64,11 +66,13 @@ See examples of Automation Script below
 
 ## Nuxeo Configuration Parameters
 
-For calling the service, you need to setup configuration parameters in nuxeo.conf. The plugin provides some default values, but it is recommanded to set all the values so as to make sure your call to the service will work as expected.
+For calling the service, you need to setup configuration parameters in nuxeo.conf.
 
-* `nuxeo.hyland.cic.endpoint.auth`: The authentication endpoint. A default value is provided if this parameter is empty.
-* `nuxeo.hyland.cic.endpoint.contextEnrichment`: The enricgment endpoint. A default value is provided if this parameter is empty.
-* `nuxeo.hyland.cic.endpoint.dataCuration`: The Data Curation endpoint. A default value is provided if this parameter is empty.
+Values
+
+* `nuxeo.hyland.cic.endpoint.auth`: The authentication endpoint. The plugin adds the "/connect/token" final path. So your URL is something like https://auth.etc.etc.hyland.com/idp
+* `nuxeo.hyland.cic.endpoint.contextEnrichment`: The enrichment endpoint.
+* `nuxeo.hyland.cic.endpoint.dataCuration`: The Data Curation endpoint.
 * `nuxeo.hyland.cic.enrichment.clientId`: Your enrichment clientId
 * `nuxeo.hyland.cic.enrichment.clientSecret`: Your enrichment client secret
 * `nuxeo.hyland.cic.datacuration.clientId`: Your data curation clientId
