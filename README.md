@@ -73,7 +73,8 @@ See examples of Automation Script below
 
 ## Know Limitation
 
-The service allowas sending/handling files in batch, the plugin, for now, only handle a single file at a time.
+* The service allowas sending/handling files in batch, the plugin, for now, only handle a single file at a time.
+* More a `TODO` than a limitation: As of May 2025, the plugin requires cleanup. It is a presales plugin we wanted to deliver quickly and  some code is duplicated here and there. Nothing that bad though :-)
 
 
 ## Nuxeo Configuration Parameters

@@ -23,6 +23,7 @@ package org.nuxeo.labs.hyland.knowledge.enrichment.test;
 import java.util.Properties;
 
 import org.apache.commons.lang3.StringUtils;
+import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.runtime.test.runner.RunnerFeature;
 
@@ -101,7 +102,8 @@ public class ConfigCheckerFeature implements RunnerFeature {
         
         systemProps = System.getProperties();
 
-        boolean hasEndpointAuth = hasProperty(HylandKEServiceImpl.ENDPOINT_AUTH_PARAM, ENV_CIC_ENDPOINT_AUTH);if (!hasEnrichmentClientInfo) {
+        boolean hasEndpointAuth = hasProperty(HylandKEServiceImpl.ENDPOINT_AUTH_PARAM, ENV_CIC_ENDPOINT_AUTH);
+        if (!hasEndpointAuth) {
             System.out.println("Missing CIC Auth endpoint => no tests");
         }
 
@@ -130,6 +132,8 @@ public class ConfigCheckerFeature implements RunnerFeature {
         if (!hasDataCurationClientInfo) {
             System.out.println("Missing CIC Data Curation Client info => no tests of data curation");
         }
+        
+        //System.out.println("\n\n\nhasEnrichmentClientInfo: " + hasEnrichmentClientInfo + ", hasDataCurationClientInfo: " + hasDataCurationClientInfo + "\n\n\n");
 
         // ======================================================================
         // ======================================================================
