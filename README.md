@@ -349,12 +349,19 @@ Also you can use the `-DskipTests` flag.
 
 Please, see documentation at `ConfigCheckerFeature.class`. Basically, you can setup environement variables to be used as configuration parameters:
 
+* `CIC_ENDPOINT_AUTH`
+* `CIC_ENDPOINT_ENRICHMENT`
+* `CIC_ENDPOINT_DATA_CURATION`
 * `CIC_ENRICHMENT_CLIENT_ID`
 * `CIC_ENRICHMENT_CLIENT_SECRET`
 * `CIC_DATA_CURATION_CLIENT_ID`
 * `CIC_DATA_CURATION_CLIENT_SECRET`
 
-Thenn run the unit tests (or the full build).
+Then run the unit tests (or the full build).
+
+Tips on Mac OS for Eclipse:
+1. Add these env. variables to you .bash_profile (or whatever starter script you have)
+2. Open a new terminal and start eclipse from there. Just do a `/path/to/Eclipse.app/Contents/MacOS/eclipse`.
 
 
 ## Support

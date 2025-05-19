@@ -41,8 +41,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.NuxeoException;
-import org.nuxeo.ecm.core.cache.Cache;
-import org.nuxeo.ecm.core.cache.CacheService;
 import org.nuxeo.ecm.platform.mimetype.interfaces.MimetypeRegistry;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.model.DefaultComponent;
