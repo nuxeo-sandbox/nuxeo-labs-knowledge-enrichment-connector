@@ -292,22 +292,22 @@ public class TestHylandKEService {
         String result = hylandKEService.curate(f, options);
         assertNotNull(result);
         
-        File file = new File("/Users/thibaud.arguillere/Desktop/output-MDAST.json");
-        org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
+        //File file = new File("/Users/thibaud.arguillere/Desktop/output-MDAST.json");
+        //org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
         
         
-        options = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": false, \"json_schema\": \"FULL\"}";
-        result = hylandKEService.curate(f, options);
-        assertNotNull(result);
-        file = new File("/Users/thibaud.arguillere/Desktop/output-FULL.json");
-        org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
+        //options = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": false, \"json_schema\": \"FULL\"}";
+        //result = hylandKEService.curate(f, options);
+        //assertNotNull(result);
+        //file = new File("/Users/thibaud.arguillere/Desktop/output-FULL.json");
+        //org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
         
         
-        options = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": false, \"json_schema\": \"PIPELINE\"}";
-        result = hylandKEService.curate(f, options);
-        assertNotNull(result);
-        file = new File("/Users/thibaud.arguillere/Desktop/output-PIPELINE.json");
-        org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
+        //options = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": false, \"json_schema\": \"PIPELINE\"}";
+        //result = hylandKEService.curate(f, options);
+        //assertNotNull(result);
+        //file = new File("/Users/thibaud.arguillere/Desktop/output-PIPELINE.json");
+        //org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
         
         
         

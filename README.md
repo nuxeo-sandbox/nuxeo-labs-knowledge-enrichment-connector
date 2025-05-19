@@ -16,17 +16,24 @@ The plugin provides two kinds of operations handling the calls to the service (s
 
 ## Usage
 
-1. Have a valid application on Content Intelligence Cloud/Content Innovation Cloud. also look at its documentation. You need valid endpoints (authentication, content intelligence, data curation), and valid clientId and clientSecret.
-
+1. Have a valid application on Content Intelligence Cloud/Content Innovation Cloud. Also look at its documentation. You need valid endpoints (authentication, content intelligence, data curation), and valid clientId and clientSecret.
 2. Setup the configuration parameters required by the plugin
 3. From Nuxeo Studio, create an Automation Script that calls the operation(s), then handle the JSON result. From this result, you will typically save values in fields.
 
-The returned JSON is formated as follow. It encapsulates a couple information about the call to the service (HTTP Result code) and the response as returned by the service. This response is returned "as is", no modification is applied by the plugin, and it is stored the `"response"` property of the result.
+The returned JSON is always formated as follow. It encapsulates a couple information about the call to the service (HTTP Result code) and the response as returned by the service. This response is returned "as is", no modification is applied by the plugin, and it is stored in the `"response"` property of the result.
+
+The `"response"` may/do change depending on the API call, of course, so please check the documentation (or do some testring and output the whole JSON to look at it). For example, the object is not the same for Enrichment and for Data Curation, and it is normal, but in all cases the response always provide 2the three following fields:
+
+* `responseCode`: Integer, the HTTP code returned by the service (should be 200)
+* `responseMessage`: String, the HTTP message returned by the service. Should be "OK",
+* `response`: Strng. The JSON String as returned by the service, with no almteration.
+
+For example, after call to the Enrichment API, the return JSON will be like:
 
 ```
 {
-    "responseCode": Integer, the HTTP code returned by the service. Should be 200,
-    "responseMessage": String, the HTTP message returned by the service. Should be "OK",
+    "responseCode": 200,
+    "responseMessage": "OK",
     "response": A JSON object with the following fields (see Knowledge Enrichment API doumentation)
     {
         "id": String, the ID of the response
@@ -64,6 +71,11 @@ For details about each result, please see the Knowledge Enrichment API and schem
 See examples of Automation Script below
 
 
+## Know Limitation
+
+The service allowas sending/handling files in batch, the plugin, for now, only handle a single file at a time.
+
+
 ## Nuxeo Configuration Parameters
 
 For calling the service, you need to setup configuration parameters in nuxeo.conf.
@@ -85,7 +97,7 @@ Other parameters are used to tune the behavior:
   
   So, with these default values, the code will try maximum 10 times and it will take about 30s max.
 
-At startup, if some paraleters are missing, the plugin logs a WARN. For example, if you do not provide data curation clientId:
+At startup, if some parameters are missing, the plugin logs a WARN. For example, if you do not provide data curation clientId:
 
 ```
 WARN  [main] [org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEServiceImpl] No CIC Data Curation ClientId provided (nuxeo.hyland.cic.datacuration.clientId), calls to the service will fail.
@@ -327,8 +339,21 @@ function run(input, params) {
 
 ### `HylandKnowledgeEnrichment.Invoke`
 
-[to be done]
+A low level operation, for which you must provide the correct endpoints, correct headers etc.
 
+* Input: `blob`
+* Output: `Blob`, a JSON blob
+* Parameters
+  * `httpMethod`: String, required, "GET", "PUT" or "POST"
+  * `endpoint`: String, required, the endpoint to call. This string will be just appended to the Content Enrichment Endpoint URL you set up in the configuration parameters.
+  * `jsonPayload`: String, optjonal. A JSON string for POST/PUT request, depending on the endpoint.
+
+The operation calls the Enrichment service (after handling authentic ation) and returns the result.
+
+
+### `HylandKnowledgeEnrichment.Curate`
+
+A high-level
 
 ## How to build
 ```bash
