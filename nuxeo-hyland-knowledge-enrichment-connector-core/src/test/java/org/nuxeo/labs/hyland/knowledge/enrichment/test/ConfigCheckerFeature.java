@@ -34,10 +34,13 @@ import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEServiceImpl;
  * can be made.
  * also checks for environment variables and convert them to config. parameters, this may be useful
  * when testing quickly, so you can set the following variables:
- * CIC_ENRICHMENT_CLIENT_ID (=> nuxeo.hyland.cic.enrichment.clientId)
- * CIC_ENRICHMENT_CLIENT_SECRET (=> nuxeo.hyland.cic.enrichment.clientSecret)
- * CIC_DATA_CURATION_CLIENT_ID (=> nuxeo.hyland.cic.datacuration.clientId)
- * CIC_DATA_CURATION_CLIENT_SECRET (=> nuxeo.hyland.cic.datacuration.clientSecret)
+ * CIC_ENRICHMENT_CLIENT_ID => nuxeo.hyland.cic.enrichment.clientId
+ * CIC_ENRICHMENT_CLIENT_SECRET => nuxeo.hyland.cic.enrichment.clientSecret
+ * CIC_DATA_CURATION_CLIENT_ID => nuxeo.hyland.cic.datacuration.clientId
+ * CIC_DATA_CURATION_CLIENT_SECRET => nuxeo.hyland.cic.datacuration.clientSecret
+ * CIC_ENDPOINT_AUTH => nuxeo.hyland.cic.endpoint.auth
+ * CIC_ENDPOINT_ENRICHMENT => nuxeo.hyland.cic.endpoint.contextEnrichment
+ * CIC_ENDPOINT_DATA_CURATION => nuxeo.hyland.cic.endpoint.dataCuration
  * These are obsolete
  * HYLAND_CONTENT_INTELL_URL (correspond to nuxeo.hyland.content.intelligence.baseUrl.)
  * HYLAND_CONTENT_INTELL_HEADER_NAME (=> nuxeo.hyland.content.intelligence.authenticationHeaderName)
@@ -62,6 +65,12 @@ public class ConfigCheckerFeature implements RunnerFeature {
     public static final String ENV_CIC_DATA_CURATION_CLIENT_ID = "CIC_DATA_CURATION_CLIENT_ID";
 
     public static final String ENV_CIC_DATA_CURATION_CLIENT_SECRET = "CIC_DATA_CURATION_CLIENT_SECRET";
+
+    public static final String ENV_CIC_ENDPOINT_AUTH = "CIC_ENDPOINT_AUTH";
+
+    public static final String ENV_CIC_ENDPOINT_ENRICHMENT = "CIC_ENDPOINT_ENRICHMENT";
+
+    public static final String ENV_CIC_ENDPOINT_DATA_CURATION = "CIC_ENDPOINT_DATA_CURATION";
 
     protected static boolean hasEnrichmentClientInfo = false;
 
@@ -89,29 +98,41 @@ public class ConfigCheckerFeature implements RunnerFeature {
 
     @Override
     public void initialize(FeaturesRunner runner) throws Exception {
-
+        
         systemProps = System.getProperties();
 
+        boolean hasEndpointAuth = hasProperty(HylandKEServiceImpl.ENDPOINT_AUTH_PARAM, ENV_CIC_ENDPOINT_AUTH);if (!hasEnrichmentClientInfo) {
+            System.out.println("Missing CIC Auth endpoint => no tests");
+        }
+
+        boolean hasEndpointEnrichment = hasProperty(HylandKEServiceImpl.ENDPOINT_CONTEXT_ENRICHMENT_PARAM, ENV_CIC_ENDPOINT_ENRICHMENT);
+        if (!hasEndpointEnrichment) {
+            System.out.println("Missing CIC Enrichment endpoint => no enrichment tests");
+        }
         boolean hasEnrichmentClientId = hasProperty(HylandKEServiceImpl.ENRICHMENT_CLIENT_ID_PARAM,
                 ENV_CIC_ENRICHMENT_CLIENT_ID);
         boolean hasEnrichmentClientSecret = hasProperty(HylandKEServiceImpl.ENRICHMENT_CLIENT_SECRET_PARAM,
                 ENV_CIC_ENRICHMENT_CLIENT_SECRET);
         hasEnrichmentClientInfo = hasEnrichmentClientId && hasEnrichmentClientSecret;
         if (!hasEnrichmentClientInfo) {
-            String msg = "Missing CIC Enrichment Client info => no tests";
-            System.out.println(msg);
+            System.out.println("Missing CIC Enrichment Client info => no tests of enricvhment");
         }
 
+        boolean hasEndpointDataCuration = hasProperty(HylandKEServiceImpl.ENDPOINT_DATA_CURATION_PARAM, ENV_CIC_ENDPOINT_DATA_CURATION);
+        if (!hasEndpointDataCuration) {
+            System.out.println("Missing CIC Data Curation endpoint => no data curation tests");
+        }
         boolean hasDataCurationClientId = hasProperty(HylandKEServiceImpl.DATA_CURATION_CLIENT_ID_PARAM,
                 ENV_CIC_DATA_CURATION_CLIENT_ID);
         boolean hasDataCurationClientSecret = hasProperty(HylandKEServiceImpl.DATA_CURATION_CLIENT_SECRET_PARAM,
                 ENV_CIC_DATA_CURATION_CLIENT_SECRET);
         hasDataCurationClientInfo = hasDataCurationClientId && hasDataCurationClientSecret;
         if (!hasDataCurationClientInfo) {
-            String msg = "Missing CIC Data Curation Client info => no tests";
-            System.out.println(msg);
+            System.out.println("Missing CIC Data Curation Client info => no tests of data curation");
         }
 
+        // ======================================================================
+        // ======================================================================
         // The obsolete stuff still used in quick tests
         boolean hasUrl = hasProperty(HylandKEService.CONTENT_INTELL_URL_PARAM, ENV_URL);
         boolean hasheaderName = hasProperty(HylandKEService.CONTENT_INTELL_HEADER_NAME_PARAM, ENV_HEADER_NAME);
@@ -122,6 +143,8 @@ public class ConfigCheckerFeature implements RunnerFeature {
             msg += " we need URL and authentication header Name and authentication header Value.";
             System.out.println(msg);
         }
+        // ======================================================================
+        // ======================================================================
 
     }
 

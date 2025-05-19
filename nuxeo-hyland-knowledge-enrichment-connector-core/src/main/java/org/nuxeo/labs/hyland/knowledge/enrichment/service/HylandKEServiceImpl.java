@@ -69,17 +69,12 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
 
     public static final String DATA_CURATION_CLIENT_SECRET_PARAM = "nuxeo.hyland.cic.datacuration.clientSecret";
 
+    // Will add "/connect/token" to this endpoint.
     public static final String ENDPOINT_AUTH_PARAM = "nuxeo.hyland.cic.endpoint.auth";
-
-    public static final String ENDPOINT_AUTH_DEFAULT = "https://auth.iam.experience.hyland.com/idp/connect/token";
 
     public static final String ENDPOINT_CONTEXT_ENRICHMENT_PARAM = "nuxeo.hyland.cic.endpoint.contextEnrichment";
 
-    public static final String ENDPOINT_CONTEXT_ENRICHMENT_DEFAULT = "https://cin-context-api.experience.hyland.com/context"; // /api
-
     public static final String ENDPOINT_DATA_CURATION_PARAM = "nuxeo.hyland.cic.endpoint.dataCuration";
-
-    public static final String ENDPOINT_DATA_CURATION_DEFAULT = "https://fgg6le8a5b.execute-api.us-east-1.amazonaws.com"; // /api
 
     public static final String PULL_RESULTS_MAX_TRIES_PARAM = "nuxeo.hyland.cic.pullResultsMaxTries";
 
@@ -129,25 +124,10 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
 
         // ==========> Auth
         authEndPoint = Framework.getProperty(ENDPOINT_AUTH_PARAM);
-        if (StringUtils.isBlank(authEndPoint)) {
-            log.warn("No " + ENDPOINT_AUTH_PARAM + " provided, using default value: " + ENDPOINT_AUTH_DEFAULT);
-            authEndPoint = ENDPOINT_AUTH_DEFAULT;
-        }
 
         // ==========> EndPoints
         contextEnrichmentEndPoint = Framework.getProperty(ENDPOINT_CONTEXT_ENRICHMENT_PARAM);
-        if (StringUtils.isBlank(contextEnrichmentEndPoint)) {
-            log.warn("No " + ENDPOINT_CONTEXT_ENRICHMENT_PARAM + " provided, using default value: "
-                    + ENDPOINT_CONTEXT_ENRICHMENT_DEFAULT);
-            contextEnrichmentEndPoint = ENDPOINT_CONTEXT_ENRICHMENT_DEFAULT;
-        }
-
         dataCurationEndPoint = Framework.getProperty(ENDPOINT_DATA_CURATION_PARAM);
-        if (StringUtils.isBlank(dataCurationEndPoint)) {
-            log.warn("No " + ENDPOINT_DATA_CURATION_PARAM + " provided, using default value: "
-                    + ENDPOINT_DATA_CURATION_DEFAULT);
-            dataCurationEndPoint = ENDPOINT_DATA_CURATION_DEFAULT;
-        }
 
         // ==========> Clients
         enrichmentClientId = Framework.getProperty(ENRICHMENT_CLIENT_ID_PARAM);
@@ -234,7 +214,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
             throw new IllegalArgumentException("Unknown service: " + service);
         }
 
-        String targetUrl = authEndPoint;
+        String targetUrl = authEndPoint + "/connect/token";
 
         HttpURLConnection connection = null;
         try {
