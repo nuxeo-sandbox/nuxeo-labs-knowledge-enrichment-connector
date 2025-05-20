@@ -24,9 +24,17 @@ import org.json.JSONObject;
 import org.nuxeo.ecm.core.api.NuxeoException;
 
 /**
- * @since TODO
+ * Class handling the result of a HTTP call to the service. It encapsulates 3 values:
+ * <ul>
+ * <li>responseCode: The HTTP status (200, 401, 404, etc.), as returned by the service</li>
+ * <li>responseMessage: The response message, as returned by the service ("OK" for example)</li>
+ * <li>response: The response as returned by the service</li>
+ * </ul
+ * 
+ * @since 2023
  */
 public class ServiceCallResult {
+
     protected String response;
 
     protected int responseCode;
@@ -40,11 +48,19 @@ public class ServiceCallResult {
         this.responseMessage = responseMessage;
     }
 
+    /**
+     * @return the JSON object of thsi object
+     * @since 2023
+     */
     public JSONObject toJsonObject() {
         String jsonStr = toJsonString();
         return new JSONObject(jsonStr);
     }
 
+    /**
+     * @return the JSON String of this object
+     * @since 2023
+     */
     public String toJsonString() {
 
         // For now, the response is simple enough to quickly build it as a String (instead of creating a JSON object,
@@ -58,14 +74,25 @@ public class ServiceCallResult {
         return jsonResponseStr;
     }
 
-    // Some APIs don't return a JSON object (nor array)
-    // And it may be quoted in the response.
+    /**
+     * Some APIs don't return a JSON object (nor array).
+     * And it even may be quoted/double quoted in the response.
+     * 
+     * @return the response. If it started and ended with ", these are removed.
+     * @since And it may be quoted in the response.
+     */
     public String getResponse() {
-        String result = StringUtils.removeStart(response,  "\"");
-        result = StringUtils.removeEnd(result,  "\"");
+        String result = StringUtils.removeStart(response, "\"");
+        result = StringUtils.removeEnd(result, "\"");
         return result;
     }
 
+    /**
+     * Return the response from the service as JSONObject. Throws an exception if the response cannot be parsed as JSON
+     * 
+     * @return the response from the service as JSONObject
+     * @since 2023
+     */
     public JSONObject getResponseAsJSONObject() {
         if (response != null && !response.startsWith("{") && !response.startsWith("[")) {
             throw new NuxeoException(
@@ -74,6 +101,52 @@ public class ServiceCallResult {
         return new JSONObject(response);
     }
 
+    /**
+     * Always return a JSON Object with a single field, "result", holding the raw response (that can be a simple String,
+     * or JSON
+     * 
+     * @return
+     * @since TODO
+     */
+    public JSONObject forceResponseAsJSONObject() {
+
+        String resultStr;
+
+        if (response == null) {
+            resultStr = "{\"result\": null}";
+            
+            return new JSONObject(resultStr);
+        }
+        
+        if (response.startsWith("{") || response.startsWith("[")) {
+            JSONObject responseJson = new JSONObject(response);
+            JSONObject result = new JSONObject();
+            result.put("result", responseJson);
+
+            return result;
+        }
+        
+        // Not null and not JSON string
+        resultStr = "{\"result\":";
+        if (response.startsWith("\"")) {
+            // Assume it ends with "
+            resultStr += response;
+        } else {
+            resultStr = "\"" + response + "\"";
+        }
+        resultStr += "}";
+        return new JSONObject(resultStr);
+
+            // throw new NuxeoException("response is a simple string, cannot be converted to JSON Object. Call
+            // getResponse() instead.");
+    }
+
+    /**
+     * Return the response from the service as JSONArray. Throws an exception if the response cannot be parsed as JSON
+     * 
+     * @return the response from the service as JSONArray
+     * @since 2023
+     */
     public JSONArray getResponseAsJSONArray() {
         if (response != null && !response.startsWith("[")) {
             throw new NuxeoException(
@@ -90,12 +163,28 @@ public class ServiceCallResult {
         return responseMessage;
     }
 
+    /**
+     * @return true if responseCode is in the "OK" range
+     * @since 2023
+     */
     public boolean callWasSuccesful() {
-        return responseCode >= 200 && responseCode < 300;
+        return isHttpSuccess(responseCode);
     }
 
+    /**
+     * @return true if responseCode is not in the "OK" range
+     * @since 2023
+     */
     public boolean callFailed() {
-        return responseCode < 200 || responseCode >= 300;
+        return !isHttpSuccess(responseCode);
+    }
+
+    /**
+     * @return true if statusCode is in the "OK" range
+     * @since 2023
+     */
+    public static boolean isHttpSuccess(int statusCode) {
+        return statusCode >= 200 && statusCode < 300;
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2025 Hyland (http://hyland.com/) and others.
+i * (C) Copyright 2025 Hyland (http://hyland.com/) and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
  * limitations under the License.
  *
  * Contributors:
- *     Michael Vachette
  *     Thibaud Arguillere
  */
 package org.nuxeo.labs.hyland.knowledge.enrichment.service;
@@ -49,7 +48,6 @@ import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.model.DefaultComponent;
 
-
 public class HylandKEServiceImpl extends DefaultComponent implements HylandKEService {
 
     private static final Logger log = LogManager.getLogger(HylandKEServiceImpl.class);
@@ -77,7 +75,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
 
     public static final int PULL_RESULTS_SLEEP_INTERVALL_DEFAULT = 3000;
 
-    public static final String DATA_CURATION_PRESIGN_DEFAULT_OPTIONS = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": true}";
+    public static final String DATA_CURATION_PRESIGN_DEFAULT_OPTIONS = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": true,\"json_schema\": \"PIPELINE\"}";
 
     public static String enrichmentClientId = null;
 
@@ -352,8 +350,8 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
             return result;
         }
         // "/api/content/process" returns a string, not JSON...
-        //serviceResponse = result.getResponseAsJSONObject();
-        String resultId = result.getResponse();//.getString("response");
+        serviceResponse = result.forceResponseAsJSONObject();
+        String resultId = serviceResponse.getString("result");
 
         // 6. Get results (loop to check when done)
         result = pullEnrichmentResults(resultId);
@@ -372,7 +370,8 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
      * "quotations": true
      * },
      * "chunking": true,
-     * "embedding": true
+     * "embedding": true,
+     * "json_schema": "MDAST", "FULL" or "PIPELINE"
      * }
      */
     public ServiceCallResult curate(Blob blob, String jsonOptions) throws IOException {
@@ -399,25 +398,24 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         // ====================> 2. Get presigned stuff
         String targetUrl = dataCurationEndPoint;
         targetUrl += "/api/presign";
-        
+
         Map<String, String> headers = new HashMap<String, String>();
         headers.put("Accept", "*/*");
         headers.put("Authorization", "Bearer " + bearer);
-        //headers.put("Content-Type", "application/json");
-        
+        // headers.put("Content-Type", "application/json");
+
         if (StringUtils.isBlank(jsonOptions)) {
             jsonOptions = DATA_CURATION_PRESIGN_DEFAULT_OPTIONS;
         }
-        
+
         result = serviceCall.post(targetUrl, headers, jsonOptions);
-        if(result.callFailed()) {
+        if (result.callFailed()) {
             return result;
         }
         jsonPresign = result.getResponseAsJSONObject();
         jobId = jsonPresign.getString("job_id");
         putUrl = jsonPresign.getString("put_url");
         getUrl = jsonPresign.getString("get_url");
-        
 
         // ====================> 3. Upload with PUT
         result = serviceCall.uploadFileWithPut(file, putUrl, "application/octet-stream");
@@ -445,15 +443,15 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
                     e.printStackTrace();
                 }
             }
-            
+
             if (count > 5) {
                 log.warn("Pulling Enrichment results is taking time. This is the call #" + count + " (max calls: "
                         + pullResultsMaxTries + ")");
             }
-            
+
             result = invokeEnrichment("GET", "/api/content/process/" + resultId + "/results", null);
             count += 1;
-            
+
         } while (result.callFailed() && count <= pullResultsMaxTries);
 
         return result;
@@ -491,16 +489,17 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
             if (StringUtils.isBlank(bearer)) {
                 throw new NuxeoException("No authentication info for calling the Data Curation service.");
             }
-            
+
             Map<String, String> headers = new HashMap<String, String>();
             headers.put("Authorization", "Bearer " + bearer);
-            
+
             result = serviceCall.get(targetUrl, headers);
-            if(result.callWasSuccesful()) {
+            if (result.callWasSuccesful()) {
                 JSONObject resultJson = result.getResponseAsJSONObject();
                 String responseJobId = resultJson.getString("jobId");
                 if (!responseJobId.equals(jobId)) {
-                    String msg = "Received OK for a different jobID. Exoected jobId: " + jobId + ", received: " + responseJobId;
+                    String msg = "Received OK for a different jobID. Exoected jobId: " + jobId + ", received: "
+                            + responseJobId;
                     log.warn(msg);
                     // Not really a HTTP status, right?
                     result = new ServiceCallResult("{}", -2, msg);

@@ -14,7 +14,6 @@
  * limitations under the License.
  *
  * Contributors:
- *     Michael Vachette
  *     Thibaud Arguillere
  */
 package org.nuxeo.labs.hyland.knowledge.enrichment.automation;

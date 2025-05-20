@@ -34,7 +34,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Utility class, centralizing the HTTP calls and returning a <code>Response</code>
+ * Utility class, centralizing the HTTP calls and returning a <code>ServiceCallResult</code>
  * 
  * @since 2023
  */
@@ -46,75 +46,77 @@ public class ServiceCall {
      * Query params, if any, must be handled but the caller (and appended to the url, with the correct encoding)
      * 
      * @param url
-     * @param headers
-     * @return
-     * @since TODO
+     * @param headers. Can be null.
+     * @return a ServiceCallResult
+     * @since 2023
      */
     public ServiceCallResult get(String url, Map<String, String> headers) {
 
         ServiceCallResult result = null;
 
-        HttpURLConnection conn = null;
+        HttpURLConnection connection = null;
         try {
             // Create the URL object
             URL theUrl = new URL(url);
-            conn = (HttpURLConnection) theUrl.openConnection();
-            conn.setRequestMethod("GET");
+            connection = (HttpURLConnection) theUrl.openConnection();
+            connection.setRequestMethod("GET");
 
             if (headers != null) {
-                headers.forEach(conn::setRequestProperty);
+                headers.forEach(connection::setRequestProperty);
             }
 
-            result = readResponse(conn);
+            result = readResponse(connection);
 
         } catch (IOException e) {
             log.error("Error: " + e.getMessage());
             result = new ServiceCallResult("{}", -1, "IOException: " + e.getMessage());
         } finally {
-            if (conn != null) {
-                conn.disconnect();
-                conn = null;
+            if (connection != null) {
+                connection.disconnect();
+                connection = null;
             }
         }
 
         return result;
     }
 
-    // Just to centralize the calls. For now, they are the same
-    // (may change in the future, depending on the change sin the service API)
+    /*
+     * Just to centralize the calls. For now, they are the same
+     * (may change in the future, depending on the change sin the service API)
+     */
     protected ServiceCallResult postOrPut(String httpMethod, String url, Map<String, String> headers, String body) {
 
         ServiceCallResult result = null;
 
-        HttpURLConnection conn = null;
+        HttpURLConnection connection = null;
         try {
             // Create the URL object
             URL theUrl = new URL(url);
-            conn = (HttpURLConnection) theUrl.openConnection();
+            connection = (HttpURLConnection) theUrl.openConnection();
             // POST or PUT
-            conn.setRequestMethod(httpMethod);
+            connection.setRequestMethod(httpMethod);
 
             if (headers != null) {
-                headers.forEach(conn::setRequestProperty);
+                headers.forEach(connection::setRequestProperty);
             }
 
-            conn.setDoOutput(true);
+            connection.setDoOutput(true);
             if (body != null) {
-                try (OutputStream os = conn.getOutputStream()) {
+                try (OutputStream os = connection.getOutputStream()) {
                     byte[] input = body.getBytes(StandardCharsets.UTF_8);
                     os.write(input, 0, input.length);
                 }
             }
 
-            result = readResponse(conn);
+            result = readResponse(connection);
 
         } catch (IOException e) {
             log.error("Error: " + e.getMessage());
             result = new ServiceCallResult("{}", -1, "IOException: " + e.getMessage());
         } finally {
-            if (conn != null) {
-                conn.disconnect();
-                conn = null;
+            if (connection != null) {
+                connection.disconnect();
+                connection = null;
             }
         }
 
@@ -136,62 +138,73 @@ public class ServiceCall {
     }
 
     /**
-     * The "response" field of <code>Response</code> is always an empty JSON object, "{}".
+     * The "response" field of <code>ServiceCallResult</code> is always an empty JSON object, "{}".
      * 
      * @param file
      * @param targetUrl
      * @param contentType
      * @return a Response
      * @throws IOException
-     * @since TODO
+     * @since 2023
      */
     public ServiceCallResult uploadFileWithPut(File file, String targetUrl, String contentType) throws IOException {
 
-        HttpURLConnection conn = (HttpURLConnection) new URL(targetUrl).openConnection();
-        conn.setDoOutput(true);
-        conn.setRequestMethod("PUT");
-        conn.setRequestProperty("Content-Type", contentType);
-        conn.setFixedLengthStreamingMode(file.length());
+        if (!file.exists() || !file.isFile()) {
+            throw new IllegalArgumentException("Invalid file: " + file.getAbsolutePath());
+        }
 
-        try (OutputStream out = conn.getOutputStream(); InputStream in = new FileInputStream(file)) {
+        HttpURLConnection connection = (HttpURLConnection) new URL(targetUrl).openConnection();
+        connection.setDoOutput(true);
+        connection.setRequestMethod("PUT");
+        connection.setRequestProperty("Content-Type", contentType);
+        connection.setFixedLengthStreamingMode(file.length());
+
+        ServiceCallResult result;
+        try (OutputStream out = connection.getOutputStream(); InputStream in = new FileInputStream(file)) {
 
             byte[] buffer = new byte[8192];
             int bytesRead;
             while ((bytesRead = in.read(buffer)) != -1) {
                 out.write(buffer, 0, bytesRead);
             }
+            out.flush();
+
+            result = new ServiceCallResult("{}", connection.getResponseCode(), connection.getResponseMessage());
+
+        } catch (IOException e) {
+            log.error("Error uploading file with PUT", e);
+            result = new ServiceCallResult("{}", -1, e.getMessage());
         }
 
-        return new ServiceCallResult("{}", conn.getResponseCode(), conn.getResponseMessage());
+        return result;
     }
 
     /**
      * Utility, used by other methods (get, post, put), cone the call returns a status >= 200 < 300.
-     * 
      * The "response" field of <code>Response</code> is always an empty JSON object, "{}".
      * 
-     * @param conn
+     * @param connection
      * @return
      * @throws IOException
-     * @since TODO
+     * @since 2023
      */
-    public ServiceCallResult readResponse(HttpURLConnection conn) throws IOException {
+    public ServiceCallResult readResponse(HttpURLConnection connection) throws IOException {
 
         ServiceCallResult result = null;
 
-        int responseCode = conn.getResponseCode();
-        if (responseCode >= 200 && responseCode < 300) {
+        int responseCode = connection.getResponseCode();
+        if (ServiceCallResult.isHttpSuccess(responseCode)) {
             try (BufferedReader br = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                    new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
                 StringBuilder responseStr = new StringBuilder();
                 String line;
                 while ((line = br.readLine()) != null) {
                     responseStr.append(line.trim());
                 }
-                result = new ServiceCallResult(responseStr.toString(), responseCode, conn.getResponseMessage());
+                result = new ServiceCallResult(responseStr.toString(), responseCode, connection.getResponseMessage());
             }
         } else {
-            result = new ServiceCallResult("{}", responseCode, conn.getResponseMessage());
+            result = new ServiceCallResult("{}", responseCode, connection.getResponseMessage());
         }
 
         return result;
