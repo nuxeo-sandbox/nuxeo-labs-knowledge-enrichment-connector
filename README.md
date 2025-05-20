@@ -1,17 +1,14 @@
 # nuxeo-labs-knowledge-enrichment-connector
 
-A plugin that connects to [**Hyland Content Intelligence**](https://www.hyland.com/en/solutions/products/hyland-content-intelligence) and leverages its [**Knowledge Enrichment**](https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment) APIs.
+A plugin that connects a Nuxeo application to [**Hyland Content Intelligence**](https://www.hyland.com/en/solutions/products/hyland-content-intelligence) and leverages its [**Knowledge Enrichment**](https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment) APIs.
 
-> [!IMPORTANT]
-> The first release handles only the enrichment API, not the Data Curation API.
+It provides two kinds of operations handling the calls to the service (see details for each operation below):
 
-The plugin provides two kinds of operations handling the calls to the service (see details for each operation below):
-
-* A low-level operation, `HylandKnowledgeEnrichment.Invoke`, that calls the service and returns the JSON response without adding any logic. This is for flexibility: When/if Hyland Content Intelligence adds new endpoints, and/or adds/changes endpoint expected payload, no need to wait for a new version the plugin, just modify the caller (in most of our usages, Nuxeo Studio project and JavaScript Automation).
-* A high-level operation, `HylandKnowledgeEnrichment.Enrich` that performs all the different individual calls required to get the enrichement for a blob: Get a presigned URL, then upload the file, etc. 
+* For Enrichment and Data Curation, high-level operations (`HylandKnowledgeEnrichment.Enrich` and `HylandKnowledgeEnrichment.Curate`) that perform all the different individual calls required to get the enrichement/curation for a blob: Get a presigned URL, then upload the file, etc. This makes it easy to call the service.
+* For Enrichment only, a low-level operation, `HylandKnowledgeEnrichment.Invoke`, that calls the service and returns the JSON response without adding any logic. This is for flexibility: When/if Hyland Content Intelligence adds new endpoints, and/or adds/changes endpoint expected payload, no need to wait for a new version the plugin, just modify the caller (in most of our usages, Nuxeo Studio project and JavaScript Automation).
 
 > [!NOTE]
-> The plugin handles the authentication token, you never need to handle it (see below).
+>In all cases, the plugin handles authentication, you never need to handle it (see below).
 
 
 ## Usage
@@ -22,39 +19,39 @@ The plugin provides two kinds of operations handling the calls to the service (s
 
 The returned JSON is always formated as follow. It encapsulates a couple information about the call to the service (HTTP Result code) and the response as returned by the service. This response is returned "as is", no modification is applied by the plugin, and it is stored in the `"response"` property of the result.
 
-The `"response"` may/do change depending on the API call, of course, so please check the documentation (or do some testring and output the whole JSON to look at it). For example, the object is not the same for Enrichment and for Data Curation, and it is normal, but in all cases the response always provide 2the three following fields:
+The `"response"` changes depending on the API call, of course, so please check the documentation (or do some testing and output the whole JSON to look at it). For example, the object is not the same for Enrichment and for Data Curation, and it is normal, but in all cases the response always provides the three following fields:
 
 * `responseCode`: Integer, the HTTP code returned by the service (should be 200)
 * `responseMessage`: String, the HTTP message returned by the service. Should be "OK",
-* `response`: Strng. The JSON String as returned by the service, with no almteration.
+* `response`: String. The JSON String as returned by the service, with no alteration.
 
 For example, after call to the Enrichment API, the return JSON will be like:
 
-```
+```javascript
 {
-    "responseCode": 200,
-    "responseMessage": "OK",
-    "response": A JSON object with the following fields (see Knowledge Enrichment API doumentation)
+    "responseCode": 200, // The HTTP status code
+    "responseMessage": "OK", // The HTTP status message
+    "response":// A JSON object with the following fields (see Knowledge Enrichment API doumentation)
     {
-        "id": String, the ID of the response
-        "timestamp": String, the date of the response
-        "status": String, "SUCCESS", "FAILURE" or "PARTIAL_FAILURE"
-        "results": An array of responses, with only one element for now:
+        "id": String, // The ID of the response
+        "timestamp": String, // The date of the response
+        "status": String, // "SUCCESS", "FAILURE" or "PARTIAL_FAILURE"
+        "results": // An array of responses, with only one element for now:
         [
             {
-                "objectKey": String, the object key (as returned by the getPresignedUrl endpoint),
+                "objectKey": String, // The object key (as returned by the getPresignedUrl endpoint),
                 "imageDescription": {
                     "isSuccess": boolean,
-                    "result": String, the description
+                    "result": String // The description
                 },
                 "imageEmbeddings": {
                     "isSuccess": boolean,
                     "result": array of doubles
                 },
-                . . . other responses, null if they were not requested. For example:
+                . . . // Other responses, null if they were not requested. For example:
                 "metadata": null,
                 "textSummary": null,
-                ...etc...
+                . . .
 
             }
         ]
@@ -66,22 +63,19 @@ For details about each result, please see the Knowledge Enrichment API and schem
 
 
 > [!IMPORTANT]
-> **You should always check the `responseCode` is 200** before trying to get other fields.
+> **You should always check the `responseCode` is a success (200 <= resultCode < 300)** before trying to get other fields.
 
 See examples of Automation Script below
 
 
 ## Know Limitation
 
-* The service allowas sending/handling files in batch, the plugin, for now, only handle a single file at a time.
-* More a `TODO` than a limitation: As of May 2025, the plugin requires cleanup. It is a presales plugin we wanted to deliver quickly and  some code is duplicated here and there. Nothing that bad though :-)
+* The service allows sending/handling files in batch, the plugin, for now, only handles a single file at a time.
 
 
 ## Nuxeo Configuration Parameters
 
-For calling the service, you need to setup configuration parameters in nuxeo.conf.
-
-Values
+For calling the service, you need to setup the following configuration parameters in nuxeo.conf.
 
 * `nuxeo.hyland.cic.endpoint.auth`: The authentication endpoint. The plugin adds the "/connect/token" final path. So your URL is something like https://auth.etc.etc.hyland.com/idp
 * `nuxeo.hyland.cic.endpoint.contextEnrichment`: The enrichment endpoint.
@@ -92,13 +86,13 @@ Values
 * `nuxeo.hyland.cic.datacuration.clientSecret`: Your data curation client secret
 
 Other parameters are used to tune the behavior:
-* As of now, getting the results is asynchronous and we need to poll and check if they are ready. The following parameters are used in a loop, where if the service does not return HTTP Code 200, the thread sleeps a certain time then tries again, until a certain number of tries:
-  * `nuxeo.hyland.cic.pullResultsMaxTries`, an intergern max number of tries. Default value is `10`.
+* As of now, getting the results is asynchronous and we need to poll and check if they are ready. The following parameters are used in a loop, where if the service does not return a "success" HTTP Code, the thread sleeps a certain time then tries again, until a certain number of tries:
+  * `nuxeo.hyland.cic.pullResultsMaxTries`, an interger max number of tries. Default value is `10`.
   * `nuxeo.hyland.cic.pullResultsSleepInterval`: an integer, the sleep value in milliseconds. Default value is 3000
   
   So, with these default values, the code will try maximum 10 times and it will take about 30s max.
 
-At startup, if some parameters are missing, the plugin logs a WARN. For example, if you do not provide data curation clientId:
+At startup, if some parameters are missing, the plugin logs a WARN. For example, if you do not provide a Data Curation clientId:
 
 ```
 WARN  [main] [org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEServiceImpl] No CIC Data Curation ClientId provided (nuxeo.hyland.cic.datacuration.clientId), calls to the service will fail.
@@ -115,7 +109,7 @@ The service returns a token valid a certain time: The plugin handles this timeou
 
 ### `HylandKnowledgeEnrichment.Enrich`
 
-A high level operation that handles all the different calls to the services (get a token -> get a presigned URL -> upload the file -> call for "process actions" -> get the result)
+A high level operation that handles all the different calls to the service (get a token -> get a presigned URL -> upload the file -> call for "process actions" -> get the result)
 
 * Input: `blob`
 * Output: `Blob`, a JSON blob
@@ -134,7 +128,7 @@ The operation calls the service and returns a JSON Blob, that contains the objec
 
 #### Example: Get an image Description, store in `dc:description`
 
-In the example, we check the input document behaves as a `Picture`, and we sent the jpeg rendition (we don't want to send the main file, which could be a 300MB Photoshop file)
+In the example, we check the input document behaves as a `Picture`, and we send its jpeg rendition (we don't want to send the main file, which could be a 300MB Photoshop file)
 
 ```javascript
 // input: document, output: document
@@ -180,7 +174,7 @@ function run(input, params) {
     
     if(response.status !== "SUCCESS") {
       // (we could handle PARTIAL FAILURE. It means for example getting
-      // a description worked, getitng the embeddings failed)
+      // a description worked, getting the embeddings failed)
       Console.error("Error calling the service:\n " + JSON.stringify(resultJson, null, 2));
     } else {
       serviceResult = response.results[0]; // Only one for now
@@ -245,7 +239,7 @@ function run(input, params) {
     
     if(response.status !== "SUCCESS") {
       // (we could handle PARTIAL FAILURE. It means for example getting
-      // a description worked, getitng the embeddings failed)
+      // a description worked, getting the embeddings failed)
       Console.error("Error calling the service:\n " + JSON.stringify(resultJson, null, 2));
     } else {
       serviceResult = response.results[0]; // Only one for now
@@ -282,7 +276,7 @@ function run(input, params) {
 
 #### Example: Classification of a text file
 
-("Text file" here means it's a pdf, typically)
+("Text file" here means it's a pdf, typically. See available doc type in KE documentation)
 
 ```javascript
 function run(input, params) {
@@ -349,12 +343,92 @@ A low level operation, for which you must provide the correct endpoints, correct
   * `endpoint`: String, required, the endpoint to call. This string will be just appended to the Content Enrichment Endpoint URL you set up in the configuration parameters.
   * `jsonPayload`: String, optjonal. A JSON string for POST/PUT request, depending on the endpoint.
 
-The operation calls the Enrichment service (after handling authentic ation) and returns the result.
+The operation calls the Enrichment service (after handling authentication) and returns the result. See above for the structure of returned JSON.
 
 
 ### `HylandKnowledgeEnrichment.Curate`
 
-A high-level
+A high-level operation that handles all he flow to call Data Curation for a file and get the results.
+
+A high level operation that handles all the different calls to the service (get a token -> get a presigned URL -> upload the file -> call for "process actions" -> get the result)
+
+* Input: `blob`
+* Output: `Blob`, a JSON blob
+* Parameters
+  * `jsonOptions`: String optional. A JSON string holding the options for calling the service. See the Data Curation API documentation for a list of possible values. If the parameter is not passed (or `null`), default values are applied, getting every info and using the `MDAST` JSON schema:
+
+```JSON
+{
+	"normalization": {
+		"quotations": true
+	},
+	"chunking": true,
+	"embedding": false,
+	"json_schema": "MDAST"
+}
+```
+
+The difference between the misc. `json_schema` can be [checked here](https://hyland.github.io/DocumentFilters-Docs/latest/getting_started_with_document_filters/about_json_output.html#json_output_schema). 
+
+Also check the Data Curation API documentation for the JSON result. As of May 2025, with the above JSON Options, it will be somethign like (after uploading a sample example of contract as pdf):
+
+```javascript
+// We used the MDAST json_schema.
+{
+  "responseCode": 200,
+  "responseMessage": "OK"
+  "response": {
+    "markdown": {
+      "output": "[here the text of the input blob]",
+      "chunks": [
+        . . . // An array of text, split from the input blob
+      ]
+    },
+    "json": {
+      "type": "root",
+      "children": [
+        {
+          "type": "paragraph",
+          "children": [
+            {
+              "type": "strong",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Samples are provided for reference only" // etc., extract from the sample contact
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "children": [
+            {
+              "type": "strong",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "SAMPLE AGREEMENT" // etc., extract from the sample contact
+                }
+              ]
+            }
+          ]
+        },
+        . . . // etc.
+      ]
+    }
+```
+
+> [!NOTE]
+> Again, please, see Knowledge Enrichment API documentation for details on the values that can be used/passed.
+
+The operation calls the service and returns a JSON Blob, that contains the object described above (See Usage).
+
+> [!NOTE]
+> Reminder: To get the JSON string from this blob, you must call its `getString()` method (see examples below). Then you can `JSON.parse` this string
+
+
 
 ## How to build
 ```bash
@@ -367,7 +441,7 @@ You can add the `-DskipDocker` flag to skip building with Docker.
 
 Also you can use the `-DskipTests` flag.
 
-> [!NOTE]
+> [!IMPORTANT]
 > The Marketplace Package ID is `nuxeo-labs-knowledge-enrichment-connector`, not `nuxeo-hyland-knowledge-enrichment-connector`
 
 

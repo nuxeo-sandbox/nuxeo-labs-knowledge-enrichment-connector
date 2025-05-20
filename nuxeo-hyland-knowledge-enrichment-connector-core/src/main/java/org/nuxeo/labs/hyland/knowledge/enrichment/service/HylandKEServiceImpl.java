@@ -106,7 +106,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
     protected static int pullResultsSleepInterval;
 
     protected static ServiceCall serviceCall = new ServiceCall();
-    
+
     public enum CICService {
         ENRICHMENT, DATA_CURATION
     }
@@ -443,7 +443,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
                 }
             }
 
-            if (count > 5) {
+            if (count > (pullResultsMaxTries / 2)) {
                 log.warn("Pulling Enrichment results is taking time. This is the call #" + count + " (max calls: "
                         + pullResultsMaxTries + ")");
             }
@@ -479,7 +479,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
                     e.printStackTrace();
                 }
             }
-            if (count > 5) {
+            if (count > (pullResultsMaxTries / 2)) {
                 log.warn("Pulling Data Curation results is taking time. This is the call #" + count + " (max calls: "
                         + pullResultsMaxTries + ")");
             }
@@ -501,6 +501,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
                             + responseJobId;
                     log.warn(msg);
                     // Not really a HTTP status, right?
+                    // Nut this is needed woth the while(...) part.
                     result = new ServiceCallResult("{}", -2, msg);
                 } else {
                     String status = resultJson.getString("status");
@@ -510,6 +511,8 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
                         if (result.callWasSuccesful()) {
                             gotIt = true;
                         }
+                    } else {
+                        log.info("Pulling Data Curation status for job " + jobId + ", status: " + status);
                     }
                 }
             }

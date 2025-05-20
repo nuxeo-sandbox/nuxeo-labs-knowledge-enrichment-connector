@@ -99,7 +99,7 @@ public class TestHylandKEService {
     public void shouldGetPresignedUrl() {
 
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
-
+        
         ServiceCallResult result = hylandKEService.invokeEnrichment("GET",
                 "/api/files/upload/presigned-url?contentType=" + TEST_IMAGE_MIMETYPE.replace("/", "%2F"), null);
         assertNotNull(result);
