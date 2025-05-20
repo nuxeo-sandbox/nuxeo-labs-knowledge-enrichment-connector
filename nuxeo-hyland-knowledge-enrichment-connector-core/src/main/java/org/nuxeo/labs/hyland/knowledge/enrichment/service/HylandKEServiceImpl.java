@@ -21,17 +21,18 @@ package org.nuxeo.labs.hyland.knowledge.enrichment.service;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -43,19 +44,12 @@ import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CloseableFile;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.platform.mimetype.interfaces.MimetypeRegistry;
+import org.nuxeo.labs.knowledge.enrichment.http.ServiceCall;
+import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.model.DefaultComponent;
 
-/*
- * A reminder of the functionning of Knowledge Enrichment (https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment/ContextEnrichmentAPI/gettingstarted)
- *   1. Get Auth token
- *   2. Get presigned URL
- *   3. Uplaod file to this URL
- *   4. Get available actions
- *   5. Process
- *   6. Get results (loop to check when done)
- * 
- */
+
 public class HylandKEServiceImpl extends DefaultComponent implements HylandKEService {
 
     private static final Logger log = LogManager.getLogger(HylandKEServiceImpl.class);
@@ -112,6 +106,8 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
     protected static int pullResultsMaxTries;
 
     protected static int pullResultsSleepIntervall;
+
+    protected static ServiceCall serviceCall = new ServiceCall();
 
     public enum CICService {
         ENRICHMENT, DATA_CURATION
@@ -190,7 +186,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
     protected String fetchAuthTokenIfNeeded(CICService service) {
 
         // TODO
-        // Use a synchronize to make sure 2 simultaneous calls stay OK
+        // Use a synchronize to make sure 2 simultaneous calls stay OK?
 
         String clientId, clientSecret;
 
@@ -214,72 +210,57 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         default:
             throw new IllegalArgumentException("Unknown service: " + service);
         }
-
         String targetUrl = authEndPoint + "/connect/token";
 
-        HttpURLConnection connection = null;
+        Map<String, String> headers = new HashMap<String, String>();
+        headers.put("Accept", "*/*");
+        headers.put("Accept-Encoding", "gzip, deflate, br");
+        // Not JSON...
+        headers.put("Content-Type", "application/x-www-form-urlencoded");
+
+        // Request body
+        String postData;
         try {
-            URL url = new URL(targetUrl);
-
-            connection = (HttpURLConnection) url.openConnection();
-
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Accept", "*/*");
-            connection.setRequestProperty("Accept-Encoding", "gzip, deflate, br");
-            // Not JSON...
-            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            connection.setDoOutput(true);
-
-            // Write request body
-            String postData = "client_id=" + URLEncoder.encode(clientId, "UTF-8") + "&client_secret="
+            postData = "client_id=" + URLEncoder.encode(clientId, "UTF-8") + "&client_secret="
                     + URLEncoder.encode(clientSecret, "UTF-8") + "&grant_type=client_credentials"
                     + "&scope=environment_authorization";
+        } catch (UnsupportedEncodingException e) {
+            throw new NuxeoException("Failed to encode the request", e);
+        }
 
-            try (OutputStream os = connection.getOutputStream()) {
-                os.write(postData.getBytes("UTF-8"));
-            }
+        ServiceCallResult result = serviceCall.post(targetUrl, headers, postData);
 
-            // Get response code
-            int status = connection.getResponseCode();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                    (status >= 200 && status < 300) ? connection.getInputStream() : connection.getErrorStream(),
-                    StandardCharsets.UTF_8))) {
-                StringBuilder response = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    response.append(line);
+        if (result.callWasSuccesful()) {
+            JSONObject serviceResponse = result.getResponseAsJSONObject();
+            // {"error":"invalid_grant","error_description":"Caller not authorized for requested resource"}
+            if (serviceResponse.has("error")) {
+                String msg = "Getting a token failed with error " + serviceResponse.getString("error") + ".";
+                if (serviceResponse.has("error_description")) {
+                    msg += " " + serviceResponse.getString("error_description");
                 }
-                JSONObject responseJson = new JSONObject(response.toString());
-                // {"error":"invalid_grant","error_description":"Caller not authorized for requested resource"}
-                if (responseJson.has("error")) {
-                    String msg = "Getting a token failed with error " + responseJson.getString("error") + ".";
-                    if (responseJson.has("error_description")) {
-                        msg += " " + responseJson.getString("error_description");
-                    }
-                    log.error(msg);
-                } else {
-                    int expiresIn = responseJson.getInt("expires_in");
-                    switch (service) {
-                    case ENRICHMENT:
-                        enrichmentAuthToken = responseJson.getString("access_token");
-                        enrichmentTokenExpiration = Instant.now().plusSeconds(expiresIn - 15);
-                        break;
+                log.error(msg);
+            } else {
+                int expiresIn = serviceResponse.getInt("expires_in");
+                String token = serviceResponse.getString("access_token");
+                switch (service) {
+                case ENRICHMENT:
+                    enrichmentAuthToken = token;
+                    enrichmentTokenExpiration = Instant.now().plusSeconds(expiresIn - 15);
+                    break;
 
-                    case DATA_CURATION:
-                        dataCurationAuthToken = responseJson.getString("access_token");
-                        dataCurationTokenExpiration = Instant.now().plusSeconds(expiresIn - 15);
-                        break;
-                    }
-                    // should we get "expires_in"?
+                case DATA_CURATION:
+                    dataCurationAuthToken = token;
+                    dataCurationTokenExpiration = Instant.now().plusSeconds(expiresIn - 15);
+                    break;
                 }
             }
+        } else {
+            switch (service) {
+            case ENRICHMENT:
+                enrichmentAuthToken = null;
 
-        } catch (IOException e) {
-            throw new NuxeoException(e);
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-                connection = null;
+            case DATA_CURATION:
+                dataCurationAuthToken = null;
             }
         }
 
@@ -294,15 +275,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         return null;
     }
 
-    /*
-     * 1. Get Auth token
-     * 2. Get presigned URL
-     * 3. Upload file to this URL
-     * 4. OPT: Get available actions
-     * 5. Process
-     * 6. Pull results
-     */
-    public String enrich(Blob blob, List<String> actions, List<String> classes, List<String> similarMetadata)
+    public ServiceCallResult enrich(Blob blob, List<String> actions, List<String> classes, List<String> similarMetadata)
             throws IOException {
 
         String mimeType = blob.getMimeType();
@@ -318,13 +291,19 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
 
     }
 
-    public String enrich(File file, String mimeType, List<String> actions, List<String> classes,
+    /*
+     * 1. Get Auth token
+     * 2. Get presigned URL
+     * 3. Upload file to this URL
+     * 4. OPT: Get available actions
+     * 5. Process
+     * 6. Pull results
+     */
+    public ServiceCallResult enrich(File file, String mimeType, List<String> actions, List<String> classes,
             List<String> similarMetadata) throws IOException {
 
-        String result;
-        JSONObject resultJson;
-        JSONObject anObject;
-        int responseCode;
+        ServiceCallResult result;
+        JSONObject serviceResponse;
 
         if (StringUtils.isBlank(mimeType)) {
             MimetypeRegistry registry = Framework.getService(MimetypeRegistry.class);
@@ -336,24 +315,22 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         // 2. Get presigned URL
         result = invokeEnrichment("GET", "/api/files/upload/presigned-url?contentType=" + mimeType.replace("/", "%2F"),
                 null);
-        resultJson = new JSONObject(result);
-        responseCode = resultJson.getInt("responseCode");
-        if (responseCode != 200) {
+        if (result.callFailed()) {
             return result;
         }
 
-        anObject = resultJson.getJSONObject("response");
-        String presignedUrl = anObject.getString("presignedUrl");
-        String objectKey = anObject.getString("objectKey");
+        serviceResponse = result.getResponseAsJSONObject();
+        String presignedUrl = serviceResponse.getString("presignedUrl");
+        String objectKey = serviceResponse.getString("objectKey");
 
         // 3. Upload file to this URL
-        responseCode = uploadFileWithPut(file, presignedUrl, mimeType); // uploadFile(file, presignedUrl, mimeType);
-        if (responseCode != 200) {
-            return buildJsonResponseString("{}", responseCode, "");
+        result = serviceCall.uploadFileWithPut(file, presignedUrl, mimeType);
+        if (result.callFailed()) {
+            return result;
         }
 
         // 4. Get available actions
-        // NOt checked here
+        // Not needed here
 
         // 5. Process
         JSONObject payload = new JSONObject();
@@ -362,7 +339,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         if (similarMetadata == null) {
             payload.put("kSimilarMetadata", new JSONArray());
         } else {
-            payload.put("classes", new JSONArray(similarMetadata));
+            payload.put("kSimilarMetadata", new JSONArray(similarMetadata));
         }
         if (classes == null) {
             payload.put("classes", new JSONArray());
@@ -371,12 +348,12 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         }
 
         result = invokeEnrichment("POST", "/api/content/process", payload.toString());
-        resultJson = new JSONObject(result);
-        responseCode = resultJson.getInt("responseCode");
-        if (responseCode != 200) {
+        if (result.callFailed()) {
             return result;
         }
-        String resultId = resultJson.getString("response");
+        // "/api/content/process" returns a string, not JSON...
+        //serviceResponse = result.getResponseAsJSONObject();
+        String resultId = result.getResponse();//.getString("response");
 
         // 6. Get results (loop to check when done)
         result = pullEnrichmentResults(resultId);
@@ -398,21 +375,20 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
      * "embedding": true
      * }
      */
-    public String curate(Blob blob, String jsonOptions) throws IOException {
+    public ServiceCallResult curate(Blob blob, String jsonOptions) throws IOException {
 
         try (CloseableFile closFile = blob.getCloseableFile()) {
             return curate(closFile.getFile(), jsonOptions);
         }
     }
 
-    public String curate(File file, String jsonOptions) throws IOException {
+    public ServiceCallResult curate(File file, String jsonOptions) throws IOException {
 
-        String result;
+        ServiceCallResult result;
         JSONObject jsonPresign;
         String jobId = null;
         String getUrl = null;
         String putUrl = null;
-        int responseCode;
 
         // ====================> 1. Get auth token
         String bearer = fetchAuthTokenIfNeeded(CICService.DATA_CURATION);
@@ -423,61 +399,30 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         // ====================> 2. Get presigned stuff
         String targetUrl = dataCurationEndPoint;
         targetUrl += "/api/presign";
-
-        // Let's use the good old HttpURLConnection.
-        HttpURLConnection conn = null;
-        try {
-            // Create the URL object
-            URL url = new URL(targetUrl);
-            conn = (HttpURLConnection) url.openConnection();
-
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Accept", "*/*");
-            conn.setRequestProperty("Authorization", "Bearer " + bearer);
-            // conn.setRequestProperty("Content-Type", "application/json");
-
-            conn.setDoOutput(true);
-            if (StringUtils.isBlank(jsonOptions)) {
-                jsonOptions = DATA_CURATION_PRESIGN_DEFAULT_OPTIONS;
-            }
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonOptions.getBytes(StandardCharsets.UTF_8);
-                os.write(input, 0, input.length);
-            }
-
-            // Get response code
-            responseCode = conn.getResponseCode();
-            if (responseCode >= 200 && responseCode < 300) {
-                try (BufferedReader br = new BufferedReader(
-                        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-                    StringBuilder theResponse = new StringBuilder();
-                    String line;
-                    while ((line = br.readLine()) != null) {
-                        theResponse.append(line.trim());
-                    }
-                    jsonPresign = new JSONObject(theResponse.toString());
-                    jobId = jsonPresign.getString("job_id");
-                    putUrl = jsonPresign.getString("put_url");
-                    getUrl = jsonPresign.getString("get_url");
-                }
-            } else {
-                result = buildJsonResponseString("{}", responseCode, conn.getResponseMessage());
-                return result;
-            }
-
-        } catch (IOException e) {
-            System.err.println("Error: " + e.getMessage());
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-                conn = null;
-            }
+        
+        Map<String, String> headers = new HashMap<String, String>();
+        headers.put("Accept", "*/*");
+        headers.put("Authorization", "Bearer " + bearer);
+        //headers.put("Content-Type", "application/json");
+        
+        if (StringUtils.isBlank(jsonOptions)) {
+            jsonOptions = DATA_CURATION_PRESIGN_DEFAULT_OPTIONS;
         }
+        
+        result = serviceCall.post(targetUrl, headers, jsonOptions);
+        if(result.callFailed()) {
+            return result;
+        }
+        jsonPresign = result.getResponseAsJSONObject();
+        jobId = jsonPresign.getString("job_id");
+        putUrl = jsonPresign.getString("put_url");
+        getUrl = jsonPresign.getString("get_url");
+        
 
         // ====================> 3. Upload with PUT
-        responseCode = uploadFileWithPut(file, putUrl, "application/octet-stream");
-        if (responseCode != 200) {
-            return buildJsonResponseString("{}", responseCode, "");
+        result = serviceCall.uploadFileWithPut(file, putUrl, "application/octet-stream");
+        if (result.callFailed()) {
+            return result;
         }
 
         // ====================> 4. Pull results
@@ -487,11 +432,9 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
 
     }
 
-    protected String pullEnrichmentResults(String resultId) {
+    protected ServiceCallResult pullEnrichmentResults(String resultId) {
 
-        String result;
-        JSONObject resultJson;
-        int responseCode;
+        ServiceCallResult result;
         int count = 1;
 
         do {
@@ -502,15 +445,16 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
                     e.printStackTrace();
                 }
             }
+            
             if (count > 5) {
                 log.warn("Pulling Enrichment results is taking time. This is the call #" + count + " (max calls: "
                         + pullResultsMaxTries + ")");
             }
+            
             result = invokeEnrichment("GET", "/api/content/process/" + resultId + "/results", null);
-            resultJson = new JSONObject(result);
-            responseCode = resultJson.getInt("responseCode");
             count += 1;
-        } while (responseCode != 200 || count >= pullResultsMaxTries);
+            
+        } while (result.callFailed() && count <= pullResultsMaxTries);
 
         return result;
     }
@@ -519,18 +463,16 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
      * Pull to dataCurationEndPoint/status/job_id until getting it "Done"
      * Once "Done", just GET at the getUrl (presigned)
      */
-    protected String pullDataCurationResults(String jobId, String getUrl) {
+    protected ServiceCallResult pullDataCurationResults(String jobId, String getUrl) {
 
-        String result = null;
-        String status;
+        ServiceCallResult result = null;
         int count = 1;
-        JSONObject resultJson;
 
         if (StringUtils.isBlank(jobId) || StringUtils.isBlank(getUrl)) {
             throw new IllegalArgumentException("jobId and/or getUrl - presigned - is/are null");
         }
 
-        int responseCode = 0;
+        String targetUrl = dataCurationEndPoint + "/api/status/" + jobId;
         boolean gotIt = false;
         do {
             if (count > 1) {
@@ -549,89 +491,42 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
             if (StringUtils.isBlank(bearer)) {
                 throw new NuxeoException("No authentication info for calling the Data Curation service.");
             }
-
-            String targetUrl = dataCurationEndPoint + "/api/status/" + jobId;
-            HttpURLConnection conn = null;
-            try {
-                URL url = new URL(targetUrl);
-                conn = (HttpURLConnection) url.openConnection();
-
-                conn.setRequestMethod("GET");
-                // conn.setRequestProperty("Accept", "*/*");
-                conn.setRequestProperty("Authorization", "Bearer " + bearer);
-
-                // Get response code
-                responseCode = conn.getResponseCode();
-                if (responseCode == 200) {
-                    try (BufferedReader br = new BufferedReader(
-                            new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-                        StringBuilder theResponse = new StringBuilder();
-                        String line;
-                        while ((line = br.readLine()) != null) {
-                            theResponse.append(line.trim());
-                        }
-
-                        resultJson = new JSONObject(theResponse.toString());
-
-                        // error-proof/error-check that the job ID is the correct one
-                        String responseJobId = resultJson.getString("jobId");
-                        if (!responseJobId.equals(jobId)) {
-                            log.warn("received OK for a different jobID... Pulling again");
-                            responseCode = 0;
-                        } else {
-                            status = resultJson.getString("status");
-                            
-                            System.out.println("************ " + status);
-                            
-                            if(status.toLowerCase().equals("done")) {
-                                // Just GET at the presigned URL
-                                String sampleGetResponse = sampleGET(getUrl);
-                                JSONObject responseObj = new JSONObject(sampleGetResponse);
-                                if(responseObj.getInt("responseCode") == 200) {
-                                    result = sampleGetResponse;
-                                    gotIt = true;
-                                }
-                            }
+            
+            Map<String, String> headers = new HashMap<String, String>();
+            headers.put("Authorization", "Bearer " + bearer);
+            
+            result = serviceCall.get(targetUrl, headers);
+            if(result.callWasSuccesful()) {
+                JSONObject resultJson = result.getResponseAsJSONObject();
+                String responseJobId = resultJson.getString("jobId");
+                if (!responseJobId.equals(jobId)) {
+                    String msg = "Received OK for a different jobID. Exoected jobId: " + jobId + ", received: " + responseJobId;
+                    log.warn(msg);
+                    // Not really a HTTP status, right?
+                    result = new ServiceCallResult("{}", -2, msg);
+                } else {
+                    String status = resultJson.getString("status");
+                    if (status.toLowerCase().equals("done")) {
+                        // Just GET at the presigned URL, no headers required
+                        result = serviceCall.get(getUrl, null);
+                        if (result.callWasSuccesful()) {
+                            gotIt = true;
                         }
                     }
-                } else if (count >= pullResultsMaxTries) {
-                    result = buildJsonResponseString("{}", responseCode, conn.getResponseMessage());
-                    return result;
-                }
-                
-            } catch (IOException e) {
-                System.err.println("Error: " + e.getMessage());
-            } finally {
-                if (conn != null) {
-                    conn.disconnect();
-                    conn = null;
                 }
             }
 
             count += 1;
 
-        } while (!gotIt || count >= pullResultsMaxTries);
+        } while (!gotIt && count <= pullResultsMaxTries);
 
         return result;
 
     }
 
-    public String invokeEnrichment(String httpMethod, String endpoint, String jsonPayload) {
+    public ServiceCallResult invokeEnrichment(String httpMethod, String endpoint, String jsonPayload) {
 
-        String response = null;
-
-        httpMethod = httpMethod.toUpperCase();
-        // Sanitycheck
-        switch (httpMethod) {
-        case "GET":
-        case "POST":
-        case "PUT":
-            // OK;
-            break;
-
-        default:
-            throw new NuxeoException("Only GET, POST and PU are supported.");
-        }
+        ServiceCallResult result = null;
 
         // Get auth token
         String bearer = fetchAuthTokenIfNeeded(CICService.ENRICHMENT);
@@ -639,79 +534,42 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
             throw new NuxeoException("No authentication info for calling the Enrichment service.");
         }
 
-        // Get config parameter values for URL to call, authentication, etc.
+        // URL/endpoint
         String targetUrl = contextEnrichmentEndPoint;
-
         if (!endpoint.startsWith("/")) {
             targetUrl += "/";
         }
         targetUrl += endpoint;
 
-        // Let's use the good old HttpURLConnection.
-        HttpURLConnection conn = null;
-        try {
-            // Create the URL object
-            URL url = new URL(targetUrl);
-            conn = (HttpURLConnection) url.openConnection();
-
-            conn.setRequestMethod(httpMethod);
-
-            // Headers
-            // conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("Accept", "*/*");
-            conn.setRequestProperty("Authorization", "Bearer " + bearer);
-            if (endpoint.startsWith("/api/content/process")) {
-                conn.setRequestProperty("Content-Type", "application/json");
-            }
-
-            // Body, if any.
-            if ("POST".equals(httpMethod) || "PUT".equals(httpMethod)) {
-                conn.setDoOutput(true);
-                // Write JSON data to request body
-                try (OutputStream os = conn.getOutputStream()) {
-                    byte[] input = jsonPayload.getBytes(StandardCharsets.UTF_8);
-                    os.write(input, 0, input.length);
-                }
-            }
-
-            // Get response code
-            int responseCode = conn.getResponseCode();
-
-            if (responseCode >= 200 && responseCode < 300) {
-                try (BufferedReader br = new BufferedReader(
-                        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-                    StringBuilder finalResponse = new StringBuilder();
-                    String line;
-                    while ((line = br.readLine()) != null) {
-                        finalResponse.append(line.trim());
-                    }
-                    response = buildJsonResponseString(finalResponse.toString(), responseCode,
-                            conn.getResponseMessage());
-                }
-            } else {
-                response = buildJsonResponseString("{}", responseCode, conn.getResponseMessage());
-            }
-
-        } catch (IOException e) {
-            System.err.println("Error: " + e.getMessage());
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-                conn = null;
-            }
+        // Headers
+        Map<String, String> headers = new HashMap<String, String>();
+        headers.put("Accept", "*/*");
+        headers.put("Authorization", "Bearer " + bearer);
+        if (endpoint.startsWith("/api/content/process")) {
+            headers.put("Content-Type", "application/json");
         }
 
-        return response;
-    }
+        // Run
+        httpMethod = httpMethod.toUpperCase();
+        switch (httpMethod) {
+        case "GET":
+            result = serviceCall.get(targetUrl, headers);
+            break;
 
-    protected String buildJsonResponseString(String response, int responseCode, String responseMessage) {
-        String jsonResponseStr = "{";
-        jsonResponseStr += "\"response\": " + response + ",";
-        jsonResponseStr += "\"responseCode\": " + responseCode + ",";
-        jsonResponseStr += "\"responseMessage\": \"" + (responseMessage == null ? "" : responseMessage) + "\"";
-        jsonResponseStr += "}";
+        case "POST":
+            result = serviceCall.post(targetUrl, headers, jsonPayload);
+            break;
 
-        return jsonResponseStr;
+        case "PUT":
+            result = serviceCall.put(targetUrl, headers, jsonPayload);
+            break;
+
+        default:
+            throw new NuxeoException("Only GET, POST and PUT are supported.");
+        }
+
+        return result;
+
     }
 
     // ================================================================================
@@ -798,113 +656,6 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         }
 
         return response;
-    }
-
-    /**
-     * To upload the file to the presigned URL, we don't need the bearer token of course, and it
-     * is a simple upload.
-     * 
-     * @param file
-     * @param targetUrl
-     * @throws IOException
-     * @since TODO
-     */
-    public static int uploadFile(File file, String targetUrl, String contentType) throws IOException {
-        int responseCode;
-
-        HttpURLConnection conn = (HttpURLConnection) new URL(targetUrl).openConnection();
-        conn.setDoOutput(true);
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", contentType);
-        conn.setFixedLengthStreamingMode(file.length());
-
-        try (OutputStream out = conn.getOutputStream(); InputStream in = new FileInputStream(file)) {
-
-            byte[] buffer = new byte[8192];
-            int bytesRead;
-            while ((bytesRead = in.read(buffer)) != -1) {
-                out.write(buffer, 0, bytesRead);
-            }
-        }
-
-        responseCode = conn.getResponseCode();
-        // System.out.println("Response Code: " + responseCode);
-
-        // Documentaitons tates the call returns nothing.
-        return responseCode;
-        /*
-         * try (BufferedReader br = new BufferedReader(new InputStreamReader(
-         * responseCode >= 200 && responseCode < 300 ? conn.getInputStream() : conn.getErrorStream()))) {
-         * String line;
-         * while ((line = br.readLine()) != null) {
-         * System.out.println(line);
-         * }
-         * }
-         */
-    }
-
-    public static int uploadFileWithPut(File file, String targetUrl, String contentType) throws IOException {
-        HttpURLConnection conn = (HttpURLConnection) new URL(targetUrl).openConnection();
-        conn.setDoOutput(true);
-        conn.setRequestMethod("PUT");
-        conn.setRequestProperty("Content-Type", contentType);
-        conn.setFixedLengthStreamingMode(file.length());
-
-        try (OutputStream out = conn.getOutputStream(); InputStream in = new FileInputStream(file)) {
-
-            byte[] buffer = new byte[8192];
-            int bytesRead;
-            while ((bytesRead = in.read(buffer)) != -1) {
-                out.write(buffer, 0, bytesRead);
-            }
-        }
-
-        int responseCode = conn.getResponseCode();
-        return responseCode;
-    }
-    
-    public String sampleGET(String url) throws IOException {
-        
-        String result = null;
-        int responseCode;
-        HttpURLConnection conn = null;
-        
-        try {
-            // Create the URL object
-            URL theUrl = new URL(url);
-            conn = (HttpURLConnection) theUrl.openConnection();
-
-            conn.setRequestMethod("GET");
-            // No headers required
-            
-            responseCode = conn.getResponseCode();
-            if (responseCode >= 200 && responseCode < 300) {
-                try (BufferedReader br = new BufferedReader(
-                        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-                    StringBuilder finalResponse = new StringBuilder();
-                    String line;
-                    while ((line = br.readLine()) != null) {
-                        finalResponse.append(line.trim());
-                    }
-                    result = buildJsonResponseString(finalResponse.toString(), responseCode,
-                            conn.getResponseMessage());
-                }
-            } else {
-                result = buildJsonResponseString("{}", responseCode, conn.getResponseMessage());
-            }
-            
-            
-        } catch (IOException e) {
-            System.err.println("Error: " + e.getMessage());
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-                conn = null;
-            }
-        }
-        
-        return result;
-        
     }
 
 }

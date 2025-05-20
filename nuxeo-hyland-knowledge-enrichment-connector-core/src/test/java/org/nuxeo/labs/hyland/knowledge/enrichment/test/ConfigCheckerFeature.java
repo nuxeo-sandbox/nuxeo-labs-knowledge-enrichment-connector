@@ -23,12 +23,10 @@ package org.nuxeo.labs.hyland.knowledge.enrichment.test;
 import java.util.Properties;
 
 import org.apache.commons.lang3.StringUtils;
-import org.nuxeo.runtime.test.runner.Deploy;
-import org.nuxeo.runtime.test.runner.FeaturesRunner;
-import org.nuxeo.runtime.test.runner.RunnerFeature;
-
 import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
 import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEServiceImpl;
+import org.nuxeo.runtime.test.runner.FeaturesRunner;
+import org.nuxeo.runtime.test.runner.RunnerFeature;
 
 /**
  * Check the misc expected config parameters are set so a call to Hyland Content Intelligence

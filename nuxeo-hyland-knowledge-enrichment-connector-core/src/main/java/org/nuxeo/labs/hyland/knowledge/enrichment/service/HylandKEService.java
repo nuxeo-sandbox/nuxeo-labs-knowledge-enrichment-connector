@@ -24,19 +24,62 @@ import java.io.IOException;
 import java.util.List;
 
 import org.nuxeo.ecm.core.api.Blob;
+import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
 
 public interface HylandKEService {
 
-    // Kind of Low-level calls
     /**
-     * Call the KE service, using the configuration parameters (clientId, clientSecret,URLs, …)
+     * High level call performing all the different serial requests to the service (authenticate, then ask for presigned
+     * url, then send the file, etc.)
+     * <br>
+     * For the values for to pass to <code>actions</code>, <code>classes</code> and <code>similarmetadata</code>, see
+     * the service documentation at
+     * {@link https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment/ContextEnrichmentAPI}
+     * <br>
+     * The returned String is JSON String with 3 fields:
+     * {
+     * "responseCode": The HTTP response of the service when performoing the call. Should be 200
+     * "responseMessage": The HTTP response message (like "OK")
+     * "response": The JSON response from the service, unchanged
+     * }
+     * 
+     * @param blob
+     * @param actions
+     * @param classes
+     * @param similarMetadata
+     * @return
+     * @throws IOException
+     * @since TODO
+     */
+    public ServiceCallResult enrich(Blob blob, List<String> actions, List<String> classes, List<String> similarMetadata)
+            throws IOException;
+
+    /**
+     * See method
+     * <code>enrich(Blob blob, List<String> actions, List<String> classes, List<String> similarMetadata)</code>
+     * 
+     * @param file
+     * @param mimeType
+     * @param actions
+     * @param classes
+     * @param similarMetadata
+     * @return
+     * @throws IOException
+     * @since TODO
+     */
+    public ServiceCallResult enrich(File file, String mimeType, List<String> actions, List<String> classes,
+            List<String> similarMetadata) throws IOException;
+
+    /**
+     * Call the KE service, using the configuration parameters (clientId, clientSecret, endpoints, …). This is a kind of
+     * "low-level" call to the service.
      * <br>
      * The method handles the authentication token and its expiration time.
      * <br>
      * <code>jsonPayload</code> may be null, and its content depends on the <code>endpoint</code> used.
      * <br>
      * <code>endpoint</code> are documented here:
-     * https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment/ContextEnrichmentAPI
+     * {@link https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment/ContextEnrichmentAPI}
      * 
      * @param httpMethod
      * @param endpoint
@@ -44,17 +87,20 @@ public interface HylandKEService {
      * @return
      * @since 2023
      */
-    public String invokeEnrichment(String httpMethod, String endpoint, String jsonPayload);
-
-    // High level, does all the call chain for you (get token, get presigned URL, etc. etc.)
-    public String enrich(Blob blob, List<String> actions, List<String> classes, List<String> similarMetadata)
-            throws IOException;
-
-    public String enrich(File file, String mimeType, List<String> actions, List<String> classes,
-            List<String> similarMetadata) throws IOException;
+    public ServiceCallResult invokeEnrichment(String httpMethod, String endpoint, String jsonPayload);
 
     /**
-     * Implementation should provide default values is jsonOptions is null or ""
+     * Call the DataCuraiton APi and returns
+     * Implementation should provide default values is jsonOptions is null or "".
+     * For possible values, please see the service documentation at
+     * {@link https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment/DataCurationAPI}
+     * * <br>
+     * The returned String is JSON String with 3 fields:
+     * {
+     * "responseCode": The HTTP response of the service when performoing the call. Should be 200
+     * "responseMessage": The HTTP response message (like "OK")
+     * "response": The JSON response from the service, unchanged
+     * }
      * 
      * @param blob
      * @param jsonOptions
@@ -62,9 +108,18 @@ public interface HylandKEService {
      * @throws IOException
      * @since TODO
      */
-    public String curate(Blob blob, String jsonOptions) throws IOException;
+    public ServiceCallResult curate(Blob blob, String jsonOptions) throws IOException;
 
-    public String curate(File file, String jsonOptions) throws IOException;
+    /**
+     * (see <code>invokeEnrichment(String httpMethod, String endpoint, String jsonPayload)</code>
+     * 
+     * @param file
+     * @param jsonOptions
+     * @return
+     * @throws IOException
+     * @since TODO
+     */
+    public ServiceCallResult curate(File file, String jsonOptions) throws IOException;
 
     // ====================================================================================================
     /*

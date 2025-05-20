@@ -20,10 +20,7 @@
 package org.nuxeo.labs.hyland.knowledge.enrichment.automation;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
 import org.nuxeo.ecm.automation.core.annotations.Context;
 import org.nuxeo.ecm.automation.core.annotations.Operation;
 import org.nuxeo.ecm.automation.core.annotations.OperationMethod;
@@ -31,8 +28,8 @@ import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.NuxeoException;
-import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
 import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
+import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
 
 @Operation(id = HylandKECurateOp.ID, category = "Hyland Knowledge Enrichment", label = "CIC Data Curation on Blob", description = ""
         + "Invoke the Hyland Data Curation (DC) API to curate the blob. jsonOptions is optional, a JSON string"
@@ -50,13 +47,13 @@ public class HylandKECurateOp {
     @OperationMethod
     public Blob run(Blob blob) {
 
-        String response;
+        ServiceCallResult result;
         try {
-            response = ciService.curate(blob, jsonOptions);
+            result = ciService.curate(blob, jsonOptions);
         } catch (IOException e) {
             throw new NuxeoException(e);
         }
-        return Blobs.createJSONBlob(response);
+        return Blobs.createJSONBlob(result.toJsonString());
     }
 
 }

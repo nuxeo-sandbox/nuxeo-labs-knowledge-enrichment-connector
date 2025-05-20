@@ -37,6 +37,7 @@ import org.junit.runner.RunWith;
 import org.nuxeo.common.utils.FileUtils;
 import org.nuxeo.ecm.platform.test.PlatformFeature;
 import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
+import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -70,12 +71,11 @@ public class TestHylandKEService {
     public void shouldReturn404OnBadEndPoint() {
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
-        String result = hylandKEService.invokeEnrichment("GET", "/INVALID_END_POINT", null);
+        ServiceCallResult result = hylandKEService.invokeEnrichment("GET", "/INVALID_END_POINT", null);
 
         assertNotNull(result);
-        JSONObject resultJson = new JSONObject(result);
 
-        int responseCode = resultJson.getInt("responseCode");
+        int responseCode = result.getResponseCode();
         assertEquals(responseCode, 404);
     }
 
@@ -84,15 +84,13 @@ public class TestHylandKEService {
 
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
-        String result = hylandKEService.invokeEnrichment("GET", "/api/content/process/actions", null);
+        ServiceCallResult result = hylandKEService.invokeEnrichment("GET", "/api/content/process/actions", null);
 
         assertNotNull(result);
-        JSONObject resultJson = new JSONObject(result);
 
-        int responseCode = resultJson.getInt("responseCode");
-        assertEquals(responseCode, 200);
+        assertTrue(result.callWasSuccesful());
 
-        JSONArray actions = resultJson.getJSONArray("response");
+        JSONArray actions = result.getResponseAsJSONArray();
         assertNotNull(actions);
         assertTrue(actions.length() > 0);
     }
@@ -102,21 +100,19 @@ public class TestHylandKEService {
 
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
-        String result = hylandKEService.invokeEnrichment("GET",
+        ServiceCallResult result = hylandKEService.invokeEnrichment("GET",
                 "/api/files/upload/presigned-url?contentType=" + TEST_IMAGE_MIMETYPE.replace("/", "%2F"), null);
         assertNotNull(result);
-        JSONObject resultJson = new JSONObject(result);
 
-        int responseCode = resultJson.getInt("responseCode");
-        assertEquals(responseCode, 200);
+        assertTrue(result.callWasSuccesful());
 
-        JSONObject response = resultJson.getJSONObject("response");
+        JSONObject responseJson = result.getResponseAsJSONObject();
         assertNotNull(result);
 
-        String presignedUrl = response.getString("presignedUrl");
+        String presignedUrl = responseJson.getString("presignedUrl");
         assertNotNull(presignedUrl);
 
-        String objectKey = response.getString("objectKey");
+        String objectKey = responseJson.getString("objectKey");
         assertNotNull(objectKey);
 
     }
@@ -126,12 +122,12 @@ public class TestHylandKEService {
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
         File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
-        String result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-description"), null, null);
+        ServiceCallResult result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-description"), null,
+                null);
         assertNotNull(result);
 
-        JSONObject resultJson = new JSONObject(result);
         /*
-         * This is an object built by HylandCIServiceImpl, embedding the response from CIC and the result of the HTTP
+         * The response is an object built by HylandCIServiceImpl, embedding the response from CIC and the result of the HTTP
          * call
          * {
          * "response": the service response. Something like
@@ -155,13 +151,14 @@ public class TestHylandKEService {
          */
 
         // Expecting HTTP OK
-        assertEquals(200, resultJson.getInt("responseCode"));
+        assertTrue(result.callWasSuccesful());
 
-        JSONObject response = resultJson.getJSONObject("response");
-        String status = response.getString("status");
+        JSONObject responseJson = result.getResponseAsJSONObject();
+        assertNotNull(responseJson);
+        String status = responseJson.getString("status");
         assertEquals("SUCCESS", status);
 
-        JSONArray results = response.getJSONArray("results");
+        JSONArray results = responseJson.getJSONArray("results");
         JSONObject theResult = results.getJSONObject(0);
         JSONObject descriptionJson = theResult.getJSONObject("imageDescription");
         assertTrue(descriptionJson.getBoolean("isSuccess"));
@@ -177,19 +174,18 @@ public class TestHylandKEService {
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
         File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
-        String result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-embeddings"), null, null);
+        ServiceCallResult result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-embeddings"), null,
+                null);
         assertNotNull(result);
 
-        JSONObject resultJson = new JSONObject(result);
-
         // Expecting HTTP OK
-        assertEquals(200, resultJson.getInt("responseCode"));
+        assertTrue(result.callWasSuccesful());
 
-        JSONObject response = resultJson.getJSONObject("response");
-        String status = response.getString("status");
+        JSONObject responseJson = result.getResponseAsJSONObject();
+        String status = responseJson.getString("status");
         assertEquals("SUCCESS", status);
 
-        JSONArray results = response.getJSONArray("results");
+        JSONArray results = responseJson.getJSONArray("results");
         JSONObject theResult = results.getJSONObject(0);
         JSONObject embeddingsJson = theResult.getJSONObject("imageEmbeddings");
         assertTrue(embeddingsJson.getBoolean("isSuccess"));
@@ -204,20 +200,18 @@ public class TestHylandKEService {
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
         File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
-        String result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-classification"),
+        ServiceCallResult result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-classification"),
                 List.of("Disney", "DC Comics", "Marvel"), null);
         assertNotNull(result);
 
-        JSONObject resultJson = new JSONObject(result);
-
         // Expecting HTTP OK
-        assertEquals(200, resultJson.getInt("responseCode"));
+        assertTrue(result.callWasSuccesful());
 
-        JSONObject response = resultJson.getJSONObject("response");
-        String status = response.getString("status");
+        JSONObject responseJson = result.getResponseAsJSONObject();
+        String status = responseJson.getString("status");
         assertEquals("SUCCESS", status);
 
-        JSONArray results = response.getJSONArray("results");
+        JSONArray results = responseJson.getJSONArray("results");
         JSONObject theResult = results.getJSONObject(0);
         JSONObject classificationJson = theResult.getJSONObject("imageClassification");
         assertTrue(classificationJson.getBoolean("isSuccess"));
@@ -234,23 +228,21 @@ public class TestHylandKEService {
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
         File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
-        String result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE,
+        ServiceCallResult result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE,
                 List.of("image-description", "image-embeddings", "image-classification"),
                 List.of("Disney", "DC Comics", "Marvel"), null);
         assertNotNull(result);
 
-        JSONObject resultJson = new JSONObject(result);
-
         // Expecting HTTP OK
-        assertEquals(200, resultJson.getInt("responseCode"));
+        assertTrue(result.callWasSuccesful());
 
-        JSONObject response = resultJson.getJSONObject("response");
-        String status = response.getString("status");
+        JSONObject responseJson = result.getResponseAsJSONObject();
+        String status = responseJson.getString("status");
         assertEquals("SUCCESS", status);
 
-        JSONArray results = response.getJSONArray("results");
+        JSONArray results = responseJson.getJSONArray("results");
         JSONObject theResult = results.getJSONObject(0);
-        
+
         // ==========> Description
         JSONObject descriptionJson = theResult.getJSONObject("imageDescription");
         assertTrue(descriptionJson.getBoolean("isSuccess"));
@@ -258,16 +250,14 @@ public class TestHylandKEService {
         String description = descriptionJson.getString("result");
         // We should have at least "Mickey"
         assertTrue(description.toLowerCase().indexOf("mickey") > -1);
-        
-        
+
         // ==========> Embeddings
         JSONObject embeddingsJson = theResult.getJSONObject("imageEmbeddings");
         assertTrue(embeddingsJson.getBoolean("isSuccess"));
 
         JSONArray embeddings = embeddingsJson.getJSONArray("result");
         assertTrue(embeddings.length() == 1024);
-        
-        
+
         // ==========> Classification
         JSONObject classificationJson = theResult.getJSONObject("imageClassification");
         assertTrue(classificationJson.getBoolean("isSuccess"));
@@ -277,51 +267,43 @@ public class TestHylandKEService {
         // vocabulary)
         assertEquals("disney", classification.toLowerCase());
     }
-    
+
     @Test
     public void shouldGetDataCuration() throws Exception {
 
         Assume.assumeTrue(ConfigCheckerFeature.hasDataCurationClientInfo());
-        
-        File f = FileUtils.getResourceFileFromContext(TEST_CONTRACT_PATH);
-        
-        // No embeddings
-        // schema MDATS - FULL - PIPELINE. See https://hyland.github.io/DocumentFilters-Docs/latest/getting_started_with_document_filters/about_json_output.html#json_output_schema
-        String options = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": false, \"json_schema\": \"MDAST\"}";
-        String result = hylandKEService.curate(f, options);
-        assertNotNull(result);
-        
-        //File file = new File("/Users/thibaud.arguillere/Desktop/output-MDAST.json");
-        //org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
-        
-        
-        //options = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": false, \"json_schema\": \"FULL\"}";
-        //result = hylandKEService.curate(f, options);
-        //assertNotNull(result);
-        //file = new File("/Users/thibaud.arguillere/Desktop/output-FULL.json");
-        //org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
-        
-        
-        //options = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": false, \"json_schema\": \"PIPELINE\"}";
-        //result = hylandKEService.curate(f, options);
-        //assertNotNull(result);
-        //file = new File("/Users/thibaud.arguillere/Desktop/output-PIPELINE.json");
-        //org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
-        
-        
-        
-        
-        
-        
-        
 
-        JSONObject resultJson = new JSONObject(result);
+        File f = FileUtils.getResourceFileFromContext(TEST_CONTRACT_PATH);
+
+        // No embeddings
+        // schema MDATS - FULL - PIPELINE. See
+        // https://hyland.github.io/DocumentFilters-Docs/latest/getting_started_with_document_filters/about_json_output.html#json_output_schema
+        String options = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": false, \"json_schema\": \"MDAST\"}";
+        ServiceCallResult result = hylandKEService.curate(f, options);
+        assertNotNull(result);
+
+        // File file = new File("/Users/ME/Desktop/output-MDAST.json");
+        // org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
+
+        // options = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": false,
+        // \"json_schema\": \"FULL\"}";
+        // result = hylandKEService.curate(f, options);
+        // assertNotNull(result);
+        // file = new File("/Users/FileUtils/Desktop/output-FULL.json");
+        // org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
+
+        // options = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": false,
+        // \"json_schema\": \"PIPELINE\"}";
+        // result = hylandKEService.curate(f, options);
+        // assertNotNull(result);
+        // file = new File("/Users/FileUtils/Desktop/output-PIPELINE.json");
+        // org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
 
         // Expecting HTTP OK
-        assertEquals(200, resultJson.getInt("responseCode"));
+        assertTrue(result.callWasSuccesful());
 
-        JSONObject response = resultJson.getJSONObject("response");
-        assertNotNull(response);
+        JSONObject responseJson = result.getResponseAsJSONObject();
+        assertNotNull(responseJson);
     }
 
 }

@@ -31,8 +31,8 @@ import org.nuxeo.ecm.automation.core.annotations.Param;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.NuxeoException;
-import org.nuxeo.ecm.core.api.impl.blob.StringBlob;
 import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
+import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
 
 @Operation(id = HylandKEEnrichOp.ID, category = "Hyland Knowledge Enrichment", label = "CIC Knowledge Enrichement on Blob", description = ""
         + "Invoke the Hyland Knwoledge Enrichment (KE) API to enrich the blob. actions is a list of actions to process"
@@ -69,13 +69,13 @@ public class HylandKEEnrichOp {
             theSimilarMetadata = Arrays.stream(similarMetadata.split(",")).map(String::trim).toList();
         }
 
-        String response;
+        ServiceCallResult result;
         try {
-            response = ciService.enrich(blob, theActions, theClasses, theSimilarMetadata);
+            result = ciService.enrich(blob, theActions, theClasses, theSimilarMetadata);
         } catch (IOException e) {
             throw new NuxeoException(e);
         }
-        return Blobs.createJSONBlob(response);
+        return Blobs.createJSONBlob(result.toJsonString());
     }
 
 }
