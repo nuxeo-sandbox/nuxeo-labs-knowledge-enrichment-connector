@@ -11,7 +11,11 @@ It provides two kinds of operations handling the calls to the service (see detai
 >In all cases, the plugin handles authentication, you never need to handle it (see below).
 
 > [!NOTE]
-> The plug is available on the [Nuxeo MarketPlace](https://connect.nuxeo.com/nuxeo/site/marketplace/package/nuxeo-labs-knowledge-enrichment-connector) and can be added as a dependency to a Nuxeo Studio project, or installed with Docker (added to `NUXEO_PACKAGES`), or installed via `nuxeoctl mp-install nuxeo-labs-knowledge-enrichment-connector`
+> The plug is available on the [Nuxeo MarketPlace](https://connect.nuxeo.com/nuxeo/site/marketplace/package/nuxeo-labs-knowledge-enrichment-connector) and can be added as a dependency to a Nuxeo Studio project, or installed with Docker (added to `NUXEO_PACKAGES`), or installed via:
+>
+> ```
+> nuxeoctl mp-install nuxeo-labs-knowledge-enrichment-connector
+> ```
 >
 
 ## Usage
