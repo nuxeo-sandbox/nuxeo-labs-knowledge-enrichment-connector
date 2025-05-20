@@ -71,9 +71,9 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
 
     public static final int PULL_RESULTS_MAX_TRIES_DEFAULT = 10;
 
-    public static final String PULL_RESULTS_SLEEP_INTERVALL_PARAM = "nuxeo.hyland.cic.pullResultsSleepIntervall";
+    public static final String PULL_RESULTS_SLEEP_INTERVAL_PARAM = "nuxeo.hyland.cic.pullResultsSleepInterval";
 
-    public static final int PULL_RESULTS_SLEEP_INTERVALL_DEFAULT = 3000;
+    public static final int PULL_RESULTS_SLEEP_INTERVAL_DEFAULT = 3000;
 
     public static final String DATA_CURATION_PRESIGN_DEFAULT_OPTIONS = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": true,\"json_schema\": \"PIPELINE\"}";
 
@@ -103,10 +103,10 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
 
     protected static int pullResultsMaxTries;
 
-    protected static int pullResultsSleepIntervall;
+    protected static int pullResultsSleepInterval;
 
     protected static ServiceCall serviceCall = new ServiceCall();
-
+    
     public enum CICService {
         ENRICHMENT, DATA_CURATION
     }
@@ -173,11 +173,11 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         }
         pullResultsMaxTries = Integer.parseInt(param);
 
-        param = Framework.getProperty(PULL_RESULTS_SLEEP_INTERVALL_PARAM);
+        param = Framework.getProperty(PULL_RESULTS_SLEEP_INTERVAL_PARAM);
         if (StringUtils.isBlank(param)) {
-            param = "" + PULL_RESULTS_SLEEP_INTERVALL_DEFAULT;
+            param = "" + PULL_RESULTS_SLEEP_INTERVAL_DEFAULT;
         }
-        pullResultsSleepIntervall = Integer.parseInt(param);
+        pullResultsSleepInterval = Integer.parseInt(param);
 
     }
 
@@ -286,7 +286,6 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         try (CloseableFile closFile = blob.getCloseableFile()) {
             return enrich(closFile.getFile(), mimeType, actions, classes, similarMetadata);
         }
-
     }
 
     /*
@@ -438,7 +437,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         do {
             if (count > 1) {
                 try {
-                    Thread.sleep(pullResultsSleepIntervall);
+                    Thread.sleep(pullResultsSleepInterval);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -475,7 +474,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         do {
             if (count > 1) {
                 try {
-                    Thread.sleep(pullResultsSleepIntervall);
+                    Thread.sleep(pullResultsSleepInterval);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

@@ -94,7 +94,7 @@ Values
 Other parameters are used to tune the behavior:
 * As of now, getting the results is asynchronous and we need to poll and check if they are ready. The following parameters are used in a loop, where if the service does not return HTTP Code 200, the thread sleeps a certain time then tries again, until a certain number of tries:
   * `nuxeo.hyland.cic.pullResultsMaxTries`, an intergern max number of tries. Default value is `10`.
-  * `nuxeo.hyland.cic.pullResultsSleepIntervall`: an integer, the sleep value in milliseconds. Default value is 3000
+  * `nuxeo.hyland.cic.pullResultsSleepInterval`: an integer, the sleep value in milliseconds. Default value is 3000
   
   So, with these default values, the code will try maximum 10 times and it will take about 30s max.
 

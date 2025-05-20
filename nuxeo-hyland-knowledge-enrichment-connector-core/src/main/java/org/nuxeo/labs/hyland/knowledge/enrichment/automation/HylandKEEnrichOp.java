@@ -49,6 +49,12 @@ public class HylandKEEnrichOp {
 
     @Param(name = "similarMetadata", required = false)
     protected String similarMetadata;
+    
+    @Param(name = "pullresultsMaxTries", required = false)
+    protected Integer pullresultsMaxTries = null;
+    
+    @Param(name = "pullresultsSleepMS", required = false)
+    protected Integer pullresultsSleepMS = null;
 
     @Context
     protected HylandKEService ciService;
