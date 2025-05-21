@@ -273,8 +273,8 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         return null;
     }
 
-    public ServiceCallResult enrich(Blob blob, List<String> actions, List<String> classes, List<String> similarMetadata)
-            throws IOException {
+    public ServiceCallResult enrich(Blob blob, List<String> actions, List<String> classes,
+            String similarMetadataJsonArrayStr) throws IOException {
 
         String mimeType = blob.getMimeType();
         if (StringUtils.isBlank(mimeType)) {
@@ -284,7 +284,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         }
 
         try (CloseableFile closFile = blob.getCloseableFile()) {
-            return enrich(closFile.getFile(), mimeType, actions, classes, similarMetadata);
+            return enrich(closFile.getFile(), mimeType, actions, classes, similarMetadataJsonArrayStr);
         }
     }
 
@@ -297,7 +297,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
      * 6. Pull results
      */
     public ServiceCallResult enrich(File file, String mimeType, List<String> actions, List<String> classes,
-            List<String> similarMetadata) throws IOException {
+            String similarMetadataJsonArrayStr) throws IOException {
 
         ServiceCallResult result;
         JSONObject serviceResponse;
@@ -333,10 +333,10 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         JSONObject payload = new JSONObject();
         payload.put("objectKeys", new JSONArray("[\"" + objectKey + "\"]"));
         payload.put("actions", new JSONArray(actions));
-        if (similarMetadata == null) {
+        if (similarMetadataJsonArrayStr == null) {
             payload.put("kSimilarMetadata", new JSONArray());
         } else {
-            payload.put("kSimilarMetadata", new JSONArray(similarMetadata));
+            payload.put("kSimilarMetadata", new JSONArray(similarMetadataJsonArrayStr));
         }
         if (classes == null) {
             payload.put("classes", new JSONArray());

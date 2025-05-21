@@ -50,8 +50,8 @@ public interface HylandKEService {
      * @throws IOException
      * @since 2023
      */
-    public ServiceCallResult enrich(Blob blob, List<String> actions, List<String> classes, List<String> similarMetadata)
-            throws IOException;
+    public ServiceCallResult enrich(Blob blob, List<String> actions, List<String> classes,
+            String similarMetadataJsonArrayStr) throws IOException;
 
     /**
      * See method
@@ -67,7 +67,7 @@ public interface HylandKEService {
      * @since 2023
      */
     public ServiceCallResult enrich(File file, String mimeType, List<String> actions, List<String> classes,
-            List<String> similarMetadata) throws IOException;
+            String similarMetadataJsonArrayStr) throws IOException;
 
     /**
      * Call the KE service, using the configuration parameters (clientId, clientSecret, endpoints, …). This is a kind of

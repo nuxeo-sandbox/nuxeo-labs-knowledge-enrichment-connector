@@ -36,7 +36,7 @@ import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
 @Operation(id = HylandKEEnrichOp.ID, category = "Hyland Knowledge Enrichment", label = "CIC Knowledge Enrichement on Blob", description = ""
         + "Invoke the Hyland Knwoledge Enrichment (KE) API to enrich the blob. actions is a list of actions to process"
         + " (image-description, image-embeddings, …), classes a list of values to be used for classification,"
-        + " and similarValues is used for metadata endpoint. (See KE documentation for details, limitation, etc.)")
+        + " and similarValues is used for metadata endpoint. It must be passed as a. (See KE documentation for details, limitation, etc.)")
 public class HylandKEEnrichOp {
 
     public static final String ID = "HylandKnowledgeEnrichment.Enrich";
@@ -47,14 +47,8 @@ public class HylandKEEnrichOp {
     @Param(name = "classes", required = false)
     protected String classes;
 
-    @Param(name = "similarMetadata", required = false)
-    protected String similarMetadata;
-    
-    @Param(name = "pullresultsMaxTries", required = false)
-    protected Integer pullresultsMaxTries = null;
-    
-    @Param(name = "pullresultsSleepMS", required = false)
-    protected Integer pullresultsSleepMS = null;
+    @Param(name = "similarMetadataJsonArrayStr", required = false)
+    protected String similarMetadataJsonArrayStr;
 
     @Context
     protected HylandKEService ciService;
@@ -69,14 +63,9 @@ public class HylandKEEnrichOp {
             theClasses = Arrays.stream(classes.split(",")).map(String::trim).toList();
         }
 
-        List<String> theSimilarMetadata = null;
-        if (StringUtils.isNotBlank(similarMetadata)) {
-            theSimilarMetadata = Arrays.stream(similarMetadata.split(",")).map(String::trim).toList();
-        }
-
         ServiceCallResult result;
         try {
-            result = ciService.enrich(blob, theActions, theClasses, theSimilarMetadata);
+            result = ciService.enrich(blob, theActions, theClasses, similarMetadataJsonArrayStr);
         } catch (IOException e) {
             throw new NuxeoException(e);
         }

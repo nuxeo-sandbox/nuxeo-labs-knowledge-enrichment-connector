@@ -123,7 +123,7 @@ A high level operation that handles all the different calls to the service (get 
 * Parameters
   * `actions`: String required. A list of comma separated actions to perform. See KE documentation about available actions
   * `classes`: String, optional.  A list of comma separated classes, to be used with some classification actions (can be ommitted or null for other actions)
-  * `similarMetadata`: String, optional.  A list of comma separated similarMetadata, to be used with some metadata actions (can be ommitted or null for other actions)
+  * `similarMetadata`: String, optional.  A JSON Array (as string) of similar metadata (array of key/value pairs). To be used with the misc. "metadata" actions.
 
 > [!NOTE]
 > Again, please, see Knowledge Enrichment API documentation for details on the values that can be used/passed.

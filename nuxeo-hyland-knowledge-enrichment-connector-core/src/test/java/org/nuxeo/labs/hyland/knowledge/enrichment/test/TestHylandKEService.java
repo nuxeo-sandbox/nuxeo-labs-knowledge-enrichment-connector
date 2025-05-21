@@ -99,7 +99,7 @@ public class TestHylandKEService {
     public void shouldGetPresignedUrl() {
 
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
-        
+
         ServiceCallResult result = hylandKEService.invokeEnrichment("GET",
                 "/api/files/upload/presigned-url?contentType=" + TEST_IMAGE_MIMETYPE.replace("/", "%2F"), null);
         assertNotNull(result);
@@ -127,7 +127,8 @@ public class TestHylandKEService {
         assertNotNull(result);
 
         /*
-         * The response is an object built by HylandCIServiceImpl, embedding the response from CIC and the result of the HTTP
+         * The response is an object built by HylandCIServiceImpl, embedding the response from CIC and the result of the
+         * HTTP
          * call
          * {
          * "response": the service response. Something like
@@ -266,6 +267,59 @@ public class TestHylandKEService {
         // So far the service returns the value lowercase anyway (which is a problem if the list of values are from a
         // vocabulary)
         assertEquals("disney", classification.toLowerCase());
+    }
+
+    @Test
+    public void shouldGetImageMetadata() throws Exception {
+        Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
+
+        String similardata = """
+                [{
+                   "dc:source": "TheSource",
+                   "dc:format": "custom",
+                   "dc:rights": "RESTRICTED",
+                 }, {
+                   "dc:source": "TheSource",
+                   "dc:format": "custom|jpeg",
+                   "dc:rights": "RESTRICTED",
+                 },{
+                   "dc:source": "Uknown",
+                   "dc:format": "custom",
+                   "dc:rights": "PUBLIC",
+                 },{
+                   "dc:source": "TheSource",
+                   "dc:format": "custom",
+                   "dc:rights": "RESTRICTED",
+                 }]
+                               """;
+        File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
+        ServiceCallResult result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-metadata-generation"),
+                null, similardata);
+        assertNotNull(result);
+
+        // Expecting HTTP OK
+        assertTrue(result.callWasSuccesful());
+
+        JSONObject responseJson = result.getResponseAsJSONObject();
+        String status = responseJson.getString("status");
+        assertEquals("SUCCESS", status);
+
+        JSONArray results = responseJson.getJSONArray("results");
+        JSONObject theResult = results.getJSONObject(0);
+        assertNotNull(theResult);
+        
+        JSONObject metadata = theResult.getJSONObject("metadata");
+        assertNotNull(metadata);
+        JSONObject metadataResult = metadata.getJSONObject("result");
+        assertNotNull(metadataResult);
+        
+        // Given the fake similar metadata, it should find at least TheSource and "custom"
+        String value = metadataResult.getString("dc:source");
+        assertEquals("TheSource", value);
+        
+        value = metadataResult.getString("dc:format");
+        assertEquals("custom", value);
+        
     }
 
     @Test
