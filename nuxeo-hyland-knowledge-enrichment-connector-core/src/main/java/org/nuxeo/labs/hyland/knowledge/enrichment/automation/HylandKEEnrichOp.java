@@ -34,7 +34,7 @@ import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
 import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
 
 @Operation(id = HylandKEEnrichOp.ID, category = "Hyland Knowledge Enrichment", label = "CIC Knowledge Enrichement on Blob", description = ""
-        + "Invoke the Hyland Knwoledge Enrichment (KE) API to enrich the blob. actions is a list of actions to process"
+        + "Invoke the Hyland Knowledge Enrichment (KE) API to enrich the blob. actions is a list of actions to process"
         + " (image-description, image-embeddings, …), classes a list of values to be used for classification,"
         + " and similarValues is used for metadata endpoint. It must be passed as a. (See KE documentation for details, limitation, etc.)")
 public class HylandKEEnrichOp {

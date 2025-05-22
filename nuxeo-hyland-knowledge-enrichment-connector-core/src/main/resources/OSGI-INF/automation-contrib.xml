@@ -5,6 +5,7 @@
         <operation class="org.nuxeo.labs.hyland.knowledge.enrichment.automation.HylandKEInvokeOp"/>
         <operation class="org.nuxeo.labs.hyland.knowledge.enrichment.automation.HylandKEEnrichOp"/>
         <operation class="org.nuxeo.labs.hyland.knowledge.enrichment.automation.HylandKECurateOp"/>
+        <operation class="org.nuxeo.labs.hyland.knowledge.enrichment.automation.ConfigureServiceOp"/>
         
         <!-- Not to be used. Kept for a while in case we need it -->
         <operation class="org.nuxeo.labs.hyland.knowledge.enrichment.automation.HylandKEInvokeObsoleteDemoOp"/>

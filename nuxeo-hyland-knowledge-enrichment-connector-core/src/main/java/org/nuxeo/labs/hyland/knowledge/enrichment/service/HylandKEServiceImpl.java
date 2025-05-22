@@ -77,19 +77,19 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
 
     public static final String DATA_CURATION_PRESIGN_DEFAULT_OPTIONS = "{\"normalization\": {\"quotations\": true},\"chunking\": true,\"embedding\": true,\"json_schema\": \"PIPELINE\"}";
 
-    public static String enrichmentClientId = null;
+    protected static String enrichmentClientId = null;
 
-    public static String enrichmentClientSecret = null;
+    protected static String enrichmentClientSecret = null;
 
-    public static String dataCurationClientId = null;
+    protected static String dataCurationClientId = null;
 
-    public static String dataCurationClientSecret = null;
+    protected static String dataCurationClientSecret = null;
 
-    public static String authEndPoint = null;
+    protected static String authEndPoint = null;
 
-    public static String contextEnrichmentEndPoint = null;
+    protected static String contextEnrichmentEndPoint = null;
 
-    public static String dataCurationEndPoint = null;
+    protected static String dataCurationEndPoint = null;
 
     public static final String CONTENT_INTELL_CACHE = "content_intelligence_cache";
 
@@ -103,7 +103,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
 
     protected static int pullResultsMaxTries;
 
-    protected static int pullResultsSleepInterval;
+    protected static int pullResultsSleepIntervalMS;
 
     protected static ServiceCall serviceCall = new ServiceCall();
 
@@ -113,6 +113,58 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
 
     public HylandKEServiceImpl() {
         initialize();
+    }
+
+    public void setPullResultsSettings(int maxTries, int sleepIntervalMS) {
+
+        String param;
+        
+        switch (maxTries) {
+        case 0:
+            // Revert to config or default
+            param = Framework.getProperty(PULL_RESULTS_MAX_TRIES_PARAM);
+            if (StringUtils.isBlank(param)) {
+                param = "" + PULL_RESULTS_MAX_TRIES_DEFAULT;
+            }
+            pullResultsMaxTries = Integer.parseInt(param);
+            break;
+
+        case -1:
+            // No change
+            break;
+
+        default:
+            pullResultsMaxTries = maxTries;
+             break;
+        }
+
+        
+        switch (sleepIntervalMS) {
+        case 0:
+            // Revert to config or default
+            param = Framework.getProperty(PULL_RESULTS_SLEEP_INTERVAL_PARAM);
+            if (StringUtils.isBlank(param)) {
+                param = "" + PULL_RESULTS_SLEEP_INTERVAL_DEFAULT;
+            }
+            pullResultsSleepIntervalMS = Integer.parseInt(param);
+            break;
+
+        case -1:
+            // No change
+            break;
+
+        default:
+            pullResultsSleepIntervalMS = sleepIntervalMS;
+             break;
+        }
+    }
+    
+    public int getPullResultsMaxTries() {
+        return pullResultsMaxTries;
+    }
+    
+    public int getPullResultsSleepIntervalMS() {
+        return pullResultsSleepIntervalMS;
     }
 
     protected void initialize() {
@@ -177,7 +229,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         if (StringUtils.isBlank(param)) {
             param = "" + PULL_RESULTS_SLEEP_INTERVAL_DEFAULT;
         }
-        pullResultsSleepInterval = Integer.parseInt(param);
+        pullResultsSleepIntervalMS = Integer.parseInt(param);
 
     }
 
@@ -437,7 +489,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         do {
             if (count > 1) {
                 try {
-                    Thread.sleep(pullResultsSleepInterval);
+                    Thread.sleep(pullResultsSleepIntervalMS);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -474,7 +526,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         do {
             if (count > 1) {
                 try {
-                    Thread.sleep(pullResultsSleepInterval);
+                    Thread.sleep(pullResultsSleepIntervalMS);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

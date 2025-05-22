@@ -114,6 +114,12 @@ The service returns a token valid a certain time: The plugin handles this timeou
 
 ## Operations
 
+* `HylandKnowledgeEnrichment.Enrich`
+* `HylandKnowledgeEnrichment.Invoke`
+* `HylandKnowledgeEnrichment.Curate`
+* `HylandKnowledgeEnrichment.Configure`
+
+
 ### `HylandKnowledgeEnrichment.Enrich`
 
 A high level operation that handles all the different calls to the service (get a token -> get a presigned URL -> upload the file -> call for "process actions" -> get the result)
@@ -435,6 +441,24 @@ The operation calls the service and returns a JSON Blob, that contains the objec
 > [!NOTE]
 > Reminder: To get the JSON string from this blob, you must call its `getString()` method (see examples below). Then you can `JSON.parse` this string
 
+
+### `HylandKnowledgeEnrichment.Configure`
+
+This operation allows for dynamically configuring some properties used by the plugin to call the service. The changes, if any, are immediate and apply for all the calls.
+
+See _Nuxeo Configuration Parameters_ above for explanation on the values.
+
+* Input: `void`
+* Output: `void`
+* Parameters
+  * `maxTries`: Integer, optional. Set the max number of tries when pulling results.
+    * If 0 => reset to configuration parameter. If no config. param is set, use default value.
+    * If -1 => Do not change (same effect as not passing the parameter)
+    * Other values set the parameter (make sure you don't pass a negative value)
+  * `sleepIntervalMS`: Integer, optional. Set the sleep interval between 2 tries when pulling results.
+    * If 0 => reset to configuration parameter. If no config. param is set, use default value.
+    * If -1 => Do not change (same effect as not passing the parameter)
+    * Other values set the parameter (make sure you don't pass a negative value)
 
 
 ## How to build

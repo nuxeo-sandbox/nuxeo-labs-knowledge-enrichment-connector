@@ -52,11 +52,7 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 @RunWith(FeaturesRunner.class)
 @Features({ AutomationFeature.class, ConfigCheckerFeature.class })
 @Deploy("nuxeo-hyland-knowledge-enrichment-connector-core")
-public class TestHylandKEEnrichOp {
-
-    protected static final String TEST_IMAGE_PATH = "files/dc-3-smaller.jpg";
-
-    protected static final String TEST_IMAGE_MIMETYPE = "image/jpeg";
+public class TestMiscAutomation {
 
     @Inject
     protected CoreSession session;
@@ -66,67 +62,6 @@ public class TestHylandKEEnrichOp {
 
     @Inject
     protected HylandKEService hylandKEService;
-
-    @Test
-    public void shouldEnrichBlob() throws Exception {
-
-        Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
-
-        OperationContext ctx = new OperationContext(session);
-        
-        File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
-        Blob blob = new FileBlob(f);
-        blob.setMimeType(TEST_IMAGE_MIMETYPE);
-        blob.setFilename(f.getName());
-        ctx.setInput(blob);
-        
-        Map<String, Object> params = new HashMap<>();
-        params.put("actions", "image-description,image-embeddings,image-classification");
-        params.put("classes", "Disney,DC Comics,Marvel");
-        // No similarMetadat in this test
-
-        Blob result = (Blob) automationService.run(ctx, HylandKEEnrichOp.ID, params);
-        Assert.assertNotNull(result);
-
-        JSONObject resultJson = new JSONObject(result.getString());
-        // Chekc HTTP call
-        int responseCode = resultJson.getInt("responseCode");
-        assertEquals(200, responseCode);
-        
-        // Now check service results
-        JSONObject response = resultJson.getJSONObject("response");
-        String status = response.getString("status");
-        assertEquals("SUCCESS", status);
-
-        JSONArray results = response.getJSONArray("results");
-        JSONObject theResult = results.getJSONObject(0);
-        
-        // ==========> Description
-        JSONObject descriptionJson = theResult.getJSONObject("imageDescription");
-        assertTrue(descriptionJson.getBoolean("isSuccess"));
-
-        String description = descriptionJson.getString("result");
-        // We should have at least "Mickey"
-        assertTrue(description.toLowerCase().indexOf("mickey") > -1);
-        
-        
-        // ==========> Embeddings
-        JSONObject embeddingsJson = theResult.getJSONObject("imageEmbeddings");
-        assertTrue(embeddingsJson.getBoolean("isSuccess"));
-
-        JSONArray embeddings = embeddingsJson.getJSONArray("result");
-        assertTrue(embeddings.length() == 1024);
-        
-        
-        // ==========> Classification
-        JSONObject classificationJson = theResult.getJSONObject("imageClassification");
-        assertTrue(classificationJson.getBoolean("isSuccess"));
-
-        String classification = classificationJson.getString("result");
-        // So far the service returns the value lowercase anyway (which is a problem if the list of values are from a
-        // vocabulary)
-        assertEquals("disney", classification.toLowerCase());
-    }
     
     @Test
     public void shouldChangeConfig() throws Exception {
@@ -155,8 +90,8 @@ public class TestHylandKEEnrichOp {
         params.put("maxTries", 0);
         params.put("sleepIntervalMS", 0);
         automationService.run(ctx, ConfigureServiceOp.ID, params);
-        assertEquals(impl.PULL_RESULTS_MAX_TRIES_DEFAULT, impl.getPullResultsMaxTries());
-        assertEquals(impl.PULL_RESULTS_SLEEP_INTERVAL_DEFAULT, impl.getPullResultsSleepIntervalMS());
+        assertEquals(HylandKEServiceImpl.PULL_RESULTS_MAX_TRIES_DEFAULT, impl.getPullResultsMaxTries());
+        assertEquals(HylandKEServiceImpl.PULL_RESULTS_SLEEP_INTERVAL_DEFAULT, impl.getPullResultsSleepIntervalMS());
         
     }
 }

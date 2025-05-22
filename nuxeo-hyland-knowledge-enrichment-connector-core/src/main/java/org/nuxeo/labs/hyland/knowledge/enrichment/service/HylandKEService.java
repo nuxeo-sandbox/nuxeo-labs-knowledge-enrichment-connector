@@ -120,6 +120,23 @@ public interface HylandKEService {
      */
     public ServiceCallResult curate(File file, String jsonOptions) throws IOException;
 
+    /**
+     * maxRetries and sleepinterval are configuration parametere, they can be tuned with this method.
+     * <br>
+     * The value is used for all and every calls until they change again.
+     * <br>
+     * Special values:
+     * <ul>
+     * <li>0: Revert to configuration parameter values. If not set, revert to default value.</li>
+     * <li>-1: Do not change the value</li>
+     * </ul>
+     * 
+     * @param maxTries
+     * @param sleepIntervalMS
+     * @since 2023
+     */
+    public void setPullResultsSettings(int maxTries, int sleepIntervalMS);
+
     // ====================================================================================================
     /*
      * Used when CIC provided APIs for quick demos, showing work in progress
