@@ -118,15 +118,11 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
     public void setPullResultsSettings(int maxTries, int sleepIntervalMS) {
 
         String param;
-        
+
         switch (maxTries) {
         case 0:
             // Revert to config or default
-            param = Framework.getProperty(PULL_RESULTS_MAX_TRIES_PARAM);
-            if (StringUtils.isBlank(param)) {
-                param = "" + PULL_RESULTS_MAX_TRIES_DEFAULT;
-            }
-            pullResultsMaxTries = Integer.parseInt(param);
+            pullResultsMaxTries = configParamToInt(PULL_RESULTS_MAX_TRIES_PARAM, PULL_RESULTS_MAX_TRIES_DEFAULT);
             break;
 
         case -1:
@@ -135,18 +131,13 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
 
         default:
             pullResultsMaxTries = maxTries;
-             break;
+            break;
         }
 
-        
         switch (sleepIntervalMS) {
         case 0:
-            // Revert to config or default
-            param = Framework.getProperty(PULL_RESULTS_SLEEP_INTERVAL_PARAM);
-            if (StringUtils.isBlank(param)) {
-                param = "" + PULL_RESULTS_SLEEP_INTERVAL_DEFAULT;
-            }
-            pullResultsSleepIntervalMS = Integer.parseInt(param);
+            pullResultsSleepIntervalMS = configParamToInt(PULL_RESULTS_SLEEP_INTERVAL_PARAM,
+                    PULL_RESULTS_SLEEP_INTERVAL_DEFAULT);
             break;
 
         case -1:
@@ -155,14 +146,14 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
 
         default:
             pullResultsSleepIntervalMS = sleepIntervalMS;
-             break;
+            break;
         }
     }
-    
+
     public int getPullResultsMaxTries() {
         return pullResultsMaxTries;
     }
-    
+
     public int getPullResultsSleepIntervalMS() {
         return pullResultsSleepIntervalMS;
     }
@@ -219,18 +210,24 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         }
 
         // ==========> Other params
-        String param = Framework.getProperty(PULL_RESULTS_MAX_TRIES_PARAM);
-        if (StringUtils.isBlank(param)) {
-            param = "" + PULL_RESULTS_MAX_TRIES_DEFAULT;
-        }
-        pullResultsMaxTries = Integer.parseInt(param);
+        pullResultsMaxTries = configParamToInt(PULL_RESULTS_MAX_TRIES_PARAM, PULL_RESULTS_MAX_TRIES_DEFAULT);
+        pullResultsSleepIntervalMS = configParamToInt(PULL_RESULTS_SLEEP_INTERVAL_PARAM,
+                PULL_RESULTS_SLEEP_INTERVAL_DEFAULT);
+    }
 
-        param = Framework.getProperty(PULL_RESULTS_SLEEP_INTERVAL_PARAM);
-        if (StringUtils.isBlank(param)) {
-            param = "" + PULL_RESULTS_SLEEP_INTERVAL_DEFAULT;
-        }
-        pullResultsSleepIntervalMS = Integer.parseInt(param);
+    protected int configParamToInt(String param, int defaultValue) {
 
+        int value;
+
+        String paramValue = Framework.getProperty(param, "" + defaultValue);
+        try {
+            value = Integer.parseInt(paramValue);
+        } catch (NumberFormatException e) {
+            log.error(param + " is not a valid integer. Using default value");
+            value = PULL_RESULTS_SLEEP_INTERVAL_DEFAULT;
+        }
+
+        return value;
     }
 
     protected String fetchAuthTokenIfNeeded(CICService service) {
