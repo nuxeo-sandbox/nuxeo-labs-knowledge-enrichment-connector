@@ -41,10 +41,8 @@ import org.nuxeo.ecm.automation.test.AutomationFeature;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.impl.blob.FileBlob;
-import org.nuxeo.labs.hyland.knowledge.enrichment.automation.ConfigureServiceOp;
 import org.nuxeo.labs.hyland.knowledge.enrichment.automation.HylandKEEnrichOp;
 import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
-import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEServiceImpl;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -126,37 +124,5 @@ public class TestHylandKEEnrichOp {
         // So far the service returns the value lowercase anyway (which is a problem if the list of values are from a
         // vocabulary)
         assertEquals("disney", classification.toLowerCase());
-    }
-    
-    @Test
-    public void shouldChangeConfig() throws Exception {
-        
-        HylandKEServiceImpl impl = (HylandKEServiceImpl) hylandKEService;
-
-        OperationContext ctx = new OperationContext(session);
-        
-        Map<String, Object> params = new HashMap<>();
-        params.put("maxTries", 20);
-        params.put("sleepIntervalMS", 5000);
-        // No similarMetadat in this test
-
-        automationService.run(ctx, ConfigureServiceOp.ID, params);
-        assertEquals(20, impl.getPullResultsMaxTries());
-        assertEquals(5000, impl.getPullResultsSleepIntervalMS());
-        
-
-        params.put("maxTries", -1);
-        params.put("sleepIntervalMS", -1);
-        automationService.run(ctx, ConfigureServiceOp.ID, params);
-        assertEquals(20, impl.getPullResultsMaxTries());
-        assertEquals(5000, impl.getPullResultsSleepIntervalMS());
-        
-
-        params.put("maxTries", 0);
-        params.put("sleepIntervalMS", 0);
-        automationService.run(ctx, ConfigureServiceOp.ID, params);
-        assertEquals(impl.PULL_RESULTS_MAX_TRIES_DEFAULT, impl.getPullResultsMaxTries());
-        assertEquals(impl.PULL_RESULTS_SLEEP_INTERVAL_DEFAULT, impl.getPullResultsSleepIntervalMS());
-        
     }
 }

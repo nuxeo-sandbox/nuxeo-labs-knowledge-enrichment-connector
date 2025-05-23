@@ -20,29 +20,19 @@
 package org.nuxeo.labs.hyland.knowledge.enrichment.test;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.inject.Inject;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.nuxeo.common.utils.FileUtils;
 import org.nuxeo.ecm.automation.AutomationService;
 import org.nuxeo.ecm.automation.OperationContext;
 import org.nuxeo.ecm.automation.test.AutomationFeature;
-import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CoreSession;
-import org.nuxeo.ecm.core.api.impl.blob.FileBlob;
 import org.nuxeo.labs.hyland.knowledge.enrichment.automation.ConfigureServiceOp;
-import org.nuxeo.labs.hyland.knowledge.enrichment.automation.HylandKEEnrichOp;
 import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
 import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEServiceImpl;
 import org.nuxeo.runtime.test.runner.Deploy;
