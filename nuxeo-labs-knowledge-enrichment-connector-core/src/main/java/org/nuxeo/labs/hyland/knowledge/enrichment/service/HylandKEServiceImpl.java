@@ -32,6 +32,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -116,8 +117,6 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
     }
 
     public void setPullResultsSettings(int maxTries, int sleepIntervalMS) {
-
-        String param;
 
         switch (maxTries) {
         case 0:
@@ -322,6 +321,115 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         return null;
     }
 
+    /*
+     * Utility class, to avoid passing/maintaining 2, 3, 4, n parameters/variables.
+     */
+    protected class FileToProcess {
+
+        public File file;
+
+        public String mimeType;
+
+        public String presignedUrl;
+
+        public String objectKey;
+
+    }
+
+    @SuppressWarnings("rawtypes")
+    public ServiceCallResult enrich(List<ContentToProcess> contentObjects, List<String> actions, List<String> classes,
+            String similarMetadataJsonArrayStr) throws IOException {
+
+        ServiceCallResult result = null;
+        JSONObject serviceResponse;
+
+        // (1. Token will be handled at first call)
+
+        // 2. Get presigned URL for every file
+        String errMsg;
+        for (ContentToProcess content : contentObjects) {
+
+            result = invokeEnrichment("GET",
+                    "/api/files/upload/presigned-url?contentType=" + content.getMimeType().replace("/", "%2F"), null);
+            if (result.callFailed()) {
+                // return result;
+
+                errMsg = "Failed getting a presigned URL for content ID <" + content.getSourceId() + ">, File name <"
+                        + content.getFile().getName() + ">.";
+                log.error(errMsg);
+                content.setErrorMessage(errMsg);
+                content.setProcessingSuccess(false);
+                continue;
+            }
+
+            serviceResponse = result.getResponseAsJSONObject();
+            String presignedUrl = serviceResponse.getString("presignedUrl");
+            String objectKey = serviceResponse.getString("objectKey");
+            content.setObjectKey(objectKey);
+
+            // 3. Upload file to this URL
+            result = serviceCall.uploadFileWithPut(content.getFile(), presignedUrl, content.getMimeType());
+            if (result.callFailed()) {
+                // return result;
+
+                errMsg = "Failed uploading content ID <" + content.getSourceId() + ">, File name <\"\n"
+                        + content.getFile().getName() + ">.";
+                log.error(errMsg);
+                content.setErrorMessage(errMsg);
+                content.setProcessingSuccess(false);
+                continue;
+            }
+            
+            content.setProcessingSuccess(true);
+
+        }
+
+        // 4. Get available actions
+        // (Not needed here)
+
+        // 5. Process
+        List<String> objectKeys = contentObjects.stream()
+                                                .filter(ContentToProcess::isProcessingSuccess)
+                                                .map(ContentToProcess::getObjectKey)
+                                                .collect(Collectors.toList());
+        
+        JSONObject payload = buildProcessActionPayload(objectKeys, actions, classes, similarMetadataJsonArrayStr);
+        result = invokeEnrichment("POST", "/api/content/process", payload.toString());
+        if (result.callFailed()) {
+            return result;
+        }
+        // "/api/content/process" returns a string, not JSON...
+        serviceResponse = result.forceResponseAsJSONObject();
+        String resultId = serviceResponse.getString("result");
+
+        // 6. Get results (loop to check when done)
+        result = pullEnrichmentResults(resultId);
+
+        // Add the info so that caller can map objectKey and their blob/file
+        if (result.callWasSuccesful()) {
+            JSONObject response = result.getResponseAsJSONObject();
+            JSONArray results = response.getJSONArray("results");
+            JSONArray mapping = new JSONArray();
+            results.forEach(oneResult -> {
+                String objectKey = ((JSONObject)oneResult).getString("objectKey");
+                ContentToProcess found = contentObjects.stream()
+                                                       .filter(content -> objectKey.equals(content.getObjectKey()))
+                                                       .findFirst()
+                                                       .orElse(null);
+                if(found != null) {
+                    JSONObject obj = new JSONObject();
+                    obj.put("sourceId", found.getSourceId());
+                    obj.put("objectKey", objectKey);
+                    mapping.put(obj);
+                }
+            });
+
+            result.setObjectKeysMapping(mapping);
+        }
+
+        return result;
+    }
+
     public ServiceCallResult enrich(Blob blob, List<String> actions, List<String> classes,
             String similarMetadataJsonArrayStr) throws IOException {
 
@@ -335,6 +443,26 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         try (CloseableFile closFile = blob.getCloseableFile()) {
             return enrich(closFile.getFile(), mimeType, actions, classes, similarMetadataJsonArrayStr);
         }
+    }
+
+    protected JSONObject buildProcessActionPayload(List<String> objectKeys, List<String> actions, List<String> classes,
+            String similarMetadataJsonArrayStr) {
+
+        JSONObject payload = new JSONObject();
+        payload.put("objectKeys", new JSONArray(objectKeys));
+        payload.put("actions", new JSONArray(actions));
+        if (similarMetadataJsonArrayStr == null) {
+            payload.put("kSimilarMetadata", new JSONArray());
+        } else {
+            payload.put("kSimilarMetadata", new JSONArray(similarMetadataJsonArrayStr));
+        }
+        if (classes == null) {
+            payload.put("classes", new JSONArray());
+        } else {
+            payload.put("classes", new JSONArray(classes));
+        }
+
+        return payload;
     }
 
     /*
@@ -379,20 +507,8 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         // Not needed here
 
         // 5. Process
-        JSONObject payload = new JSONObject();
-        payload.put("objectKeys", new JSONArray("[\"" + objectKey + "\"]"));
-        payload.put("actions", new JSONArray(actions));
-        if (similarMetadataJsonArrayStr == null) {
-            payload.put("kSimilarMetadata", new JSONArray());
-        } else {
-            payload.put("kSimilarMetadata", new JSONArray(similarMetadataJsonArrayStr));
-        }
-        if (classes == null) {
-            payload.put("classes", new JSONArray());
-        } else {
-            payload.put("classes", new JSONArray(classes));
-        }
-
+        JSONObject payload = buildProcessActionPayload(List.of(objectKey), actions, classes,
+                similarMetadataJsonArrayStr);
         result = invokeEnrichment("POST", "/api/content/process", payload.toString());
         if (result.callFailed()) {
             return result;

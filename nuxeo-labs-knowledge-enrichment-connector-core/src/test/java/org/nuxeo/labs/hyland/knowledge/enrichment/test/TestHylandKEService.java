@@ -25,9 +25,11 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 
 import javax.inject.Inject;
 
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.Assume;
@@ -36,6 +38,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.nuxeo.common.utils.FileUtils;
 import org.nuxeo.ecm.platform.test.PlatformFeature;
+import org.nuxeo.labs.hyland.knowledge.enrichment.service.ContentToProcess;
 import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
 import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
 import org.nuxeo.runtime.test.runner.Deploy;
@@ -49,9 +52,13 @@ public class TestHylandKEService {
 
     protected static final String TEST_IMAGE_PATH = "files/dc-3-smaller.jpg";
 
+    protected static final String TEST_OTHER_IMAGE_PATH = "files/musubimaru.png";
+
     protected static final String TEST_CONTRACT_PATH = "files/samplecontract.pdf";
 
     protected static final String TEST_IMAGE_MIMETYPE = "image/jpeg";
+
+    protected static final String TEST_OTHER_IMAGE_MIMETYPE = "image/png";
 
     @Inject
     protected HylandKEService hylandKEService;
@@ -339,6 +346,64 @@ public class TestHylandKEService {
         value = metadataResult.getString("dc:format");
         assertEquals("custom", value);
         
+    }
+    
+    protected boolean hasValueInJSONArray(JSONArray array, String key, String searchStr) {
+        
+        for(int i = 0; i < array.length(); i++) {
+            JSONObject obj = array.getJSONObject(i);
+            String value = obj.getString(key);
+            if(StringUtils.equals(searchStr, value)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    @Test
+    public void shouldGetDescriptionOnSeveralImages() throws Exception {
+        
+        File f1 = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
+        File f2 = FileUtils.getResourceFileFromContext(TEST_OTHER_IMAGE_PATH);
+        
+        List<ContentToProcess> content = List.of(
+                new ContentToProcess<File>("12345", f1),
+                new ContentToProcess<File>("67890", f2)
+        );
+        
+        ServiceCallResult result = hylandKEService.enrich(content, List.of("image-description"), null,
+                null);
+        assertNotNull(result);
+        
+        // Expecting HTTP OK
+        assertTrue(result.callWasSuccesful());
+        
+        JSONArray mapping = result.getObjectKeysMapping();
+        assertNotNull(mapping);
+        assertEquals(2, mapping.length());
+        // And we have our IDs
+        assertTrue(hasValueInJSONArray(mapping, "sourceId", "12345"));
+        assertTrue(hasValueInJSONArray(mapping, "sourceId", "67890"));
+
+        JSONObject responseJson = result.getResponseAsJSONObject();
+        String status = responseJson.getString("status");
+        assertEquals("SUCCESS", status);
+
+        JSONArray results = responseJson.getJSONArray("results");
+        assertTrue(results.length() == 2);
+        
+        //Check we have a description with the correct object Mapping
+        results.forEach(oneResult -> {
+            JSONObject resultObj = (JSONObject) oneResult;
+            
+            JSONObject descriptionObj = resultObj.getJSONObject("imageDescription");
+            assertNotNull(descriptionObj);
+            
+            String objectKey = resultObj.getString("objectKey");
+            // Must exists in the returned mapping
+            assertTrue(hasValueInJSONArray(mapping, "objectKey", objectKey));
+        });
     }
 
     @Test

@@ -41,6 +41,8 @@ public class ServiceCallResult {
 
     protected String responseMessage;
 
+    protected JSONArray objectKeysMapping = null;
+
     public ServiceCallResult(String response, int responseCode, String responseMessage) {
         super();
         this.response = response;
@@ -48,13 +50,28 @@ public class ServiceCallResult {
         this.responseMessage = responseMessage;
     }
 
+    public ServiceCallResult(String response, int responseCode, String responseMessage, JSONArray objectKeysMapping) {
+        super();
+        this.response = response;
+        this.responseCode = responseCode;
+        this.responseMessage = responseMessage;
+        this.objectKeysMapping = objectKeysMapping;
+    }
+
     /**
      * @return the JSON object of thsi object
      * @since 2023
      */
     public JSONObject toJsonObject() {
-        String jsonStr = toJsonString();
-        return new JSONObject(jsonStr);
+
+        JSONObject obj = new JSONObject();
+
+        obj.put("response", new JSONObject(response));
+        obj.put("responseCode", responseCode);
+        obj.put("responseMessage", (responseMessage == null ? "" : responseMessage));
+        obj.put("objectKeysMapping", objectKeysMapping);
+
+        return obj;
     }
 
     /**
@@ -63,15 +80,13 @@ public class ServiceCallResult {
      */
     public String toJsonString() {
 
-        // For now, the response is simple enough to quickly build it as a String (instead of creating a JSON object,
-        // adding fields, then toString())
-        String jsonResponseStr = "{";
-        jsonResponseStr += "\"response\": " + response + ",";
-        jsonResponseStr += "\"responseCode\": " + responseCode + ",";
-        jsonResponseStr += "\"responseMessage\": \"" + (responseMessage == null ? "" : responseMessage) + "\"";
-        jsonResponseStr += "}";
+        return toJsonString(0);
+    }
 
-        return jsonResponseStr;
+    public String toJsonString(int indentFactor) {
+
+        JSONObject obj = toJsonObject();
+        return obj.toString(indentFactor);
     }
 
     /**
@@ -114,10 +129,10 @@ public class ServiceCallResult {
 
         if (response == null) {
             resultStr = "{\"result\": null}";
-            
+
             return new JSONObject(resultStr);
         }
-        
+
         if (response.startsWith("{") || response.startsWith("[")) {
             JSONObject responseJson = new JSONObject(response);
             JSONObject result = new JSONObject();
@@ -125,7 +140,7 @@ public class ServiceCallResult {
 
             return result;
         }
-        
+
         // Not null and not JSON string
         resultStr = "{\"result\":";
         if (response.startsWith("\"")) {
@@ -137,8 +152,16 @@ public class ServiceCallResult {
         resultStr += "}";
         return new JSONObject(resultStr);
 
-            // throw new NuxeoException("response is a simple string, cannot be converted to JSON Object. Call
-            // getResponse() instead.");
+        // throw new NuxeoException("response is a simple string, cannot be converted to JSON Object. Call
+        // getResponse() instead.");
+    }
+
+    public void setObjectKeysMapping(JSONArray mapping) {
+        this.objectKeysMapping = mapping;
+    }
+    
+    public JSONArray getObjectKeysMapping() {
+        return objectKeysMapping;
     }
 
     /**

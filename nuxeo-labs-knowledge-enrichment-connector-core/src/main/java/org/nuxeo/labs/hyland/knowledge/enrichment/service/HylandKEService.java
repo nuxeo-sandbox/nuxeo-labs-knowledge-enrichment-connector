@@ -21,7 +21,9 @@ package org.nuxeo.labs.hyland.knowledge.enrichment.service;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
+import org.nuxeo.ecm.automation.core.util.BlobList;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
 
@@ -69,6 +71,39 @@ public interface HylandKEService {
     public ServiceCallResult enrich(File file, String mimeType, List<String> actions, List<String> classes,
             String similarMetadataJsonArrayStr) throws IOException;
 
+    /**
+     * Enrich a list of blobs
+     * 
+     * TO BE IMPROVED: The caller has no way to link the results to the input blobs
+     * 
+     * @param blobs
+     * @param actions
+     * @param classes
+     * @param similarMetadataJsonArrayStr
+     * @return
+     * @throws IOException
+     * @since TODO
+     */
+    public ServiceCallResult enrich(List<ContentToProcess> contentObjects, List<String> actions, List<String> classes,
+            String similarMetadataJsonArrayStr) throws IOException;
+    
+    /**
+     * Enrich a list of File
+     * 
+     * TO BE IMPROVED: The caller has no way to link the results to the input files
+     * 
+     * @param blobs
+     * @param actions
+     * @param classes
+     * @param similarMetadataJsonArrayStr
+     * @return
+     * @throws IOException
+     * @since TODO
+     */
+    /*
+    public ServiceCallResult enrich(List<ContentToProcess> files, List<String> actions, List<String> classes,
+            String similarMetadataJsonArrayStr) throws IOException;
+*/
     /**
      * Call the KE service, using the configuration parameters (clientId, clientSecret, endpoints, …). This is a kind of
      * "low-level" call to the service.
