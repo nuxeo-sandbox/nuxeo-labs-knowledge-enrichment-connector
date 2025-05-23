@@ -1,13 +1,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>org.nuxeo.labs.hyland.knowledge.enrichment</groupId>
-    <artifactId>nuxeo-hyland-knowledge-enrichment-connector-parent</artifactId>
+    <groupId>org.nuxeo.labs.knowledge.enrichment</groupId>
+    <artifactId>nuxeo-labs-knowledge-enrichment-connector-parent</artifactId>
     <version>2023.8.0-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>nuxeo-hyland-knowledge-enrichment-connector-docker</artifactId>
+  <artifactId>nuxeo-labs-knowledge-enrichment-connector-docker</artifactId>
   <name>Nuxeo Labs Content Intelligence Connector Docker</name>
   <packaging>pom</packaging>
 
@@ -25,8 +25,8 @@
             <configuration>
               <artifactItems>
                 <artifactItem>
-                  <groupId>org.nuxeo.labs.hyland.knowledge.enrichment</groupId>
-                  <artifactId>nuxeo-hyland-knowledge-enrichment-connector-package</artifactId>
+                  <groupId>org.nuxeo.labs.knowledge.enrichment</groupId>
+                  <artifactId>nuxeo-labs-knowledge-enrichment-connector-package</artifactId>
                   <type>zip</type>
                   <outputDirectory>${project.build.directory}</outputDirectory>
                 </artifactItem>
