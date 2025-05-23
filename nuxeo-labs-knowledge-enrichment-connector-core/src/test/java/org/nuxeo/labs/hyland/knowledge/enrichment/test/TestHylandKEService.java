@@ -14,7 +14,6 @@
  * limitations under the License.
  *
  * Contributors:
- *     Michael Vachette
  *     Thibaud Arguillere
  */
 package org.nuxeo.labs.hyland.knowledge.enrichment.test;
@@ -25,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.util.List;
-import java.util.Map;
 
 import javax.inject.Inject;
 
@@ -50,15 +48,15 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 @Deploy("nuxeo-hyland-knowledge-enrichment-connector-core")
 public class TestHylandKEService {
 
-    protected static final String TEST_IMAGE_PATH = "files/dc-3-smaller.jpg";
+    public static final String TEST_IMAGE_PATH = "files/dc-3-smaller.jpg";
 
-    protected static final String TEST_OTHER_IMAGE_PATH = "files/musubimaru.png";
+    public static final String TEST_OTHER_IMAGE_PATH = "files/musubimaru.png";
 
-    protected static final String TEST_CONTRACT_PATH = "files/samplecontract.pdf";
+    public static final String TEST_CONTRACT_PATH = "files/samplecontract.pdf";
 
-    protected static final String TEST_IMAGE_MIMETYPE = "image/jpeg";
+    public static final String TEST_IMAGE_MIMETYPE = "image/jpeg";
 
-    protected static final String TEST_OTHER_IMAGE_MIMETYPE = "image/png";
+    public static final String TEST_OTHER_IMAGE_MIMETYPE = "image/png";
 
     @Inject
     protected HylandKEService hylandKEService;
@@ -348,7 +346,16 @@ public class TestHylandKEService {
         
     }
     
-    protected boolean hasValueInJSONArray(JSONArray array, String key, String searchStr) {
+    /**
+     * Shared utility.
+     * 
+     * @param array
+     * @param key
+     * @param searchStr
+     * @return
+     * @since 2023
+     */
+    public static boolean hasValueInJSONArray(JSONArray array, String key, String searchStr) {
         
         for(int i = 0; i < array.length(); i++) {
             JSONObject obj = array.getJSONObject(i);
@@ -360,6 +367,7 @@ public class TestHylandKEService {
         
         return false;
     }
+
     
     @Test
     public void shouldGetDescriptionOnSeveralImages() throws Exception {
@@ -367,6 +375,7 @@ public class TestHylandKEService {
         File f1 = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
         File f2 = FileUtils.getResourceFileFromContext(TEST_OTHER_IMAGE_PATH);
         
+        @SuppressWarnings("rawtypes")
         List<ContentToProcess> content = List.of(
                 new ContentToProcess<File>("12345", f1),
                 new ContentToProcess<File>("67890", f2)

@@ -57,6 +57,16 @@ public class ServiceCallResult {
         this.responseMessage = responseMessage;
         this.objectKeysMapping = objectKeysMapping;
     }
+    
+    // M%ainly used in unit tests.
+    public ServiceCallResult(String jsonStr) {
+        JSONObject obj = new JSONObject(jsonStr);
+        
+        response = obj.getJSONObject("response").toString();
+        responseCode = obj.getInt("responseCode");
+        responseMessage = obj.getString("responseMessage");
+        objectKeysMapping = obj.getJSONArray("objectKeysMapping");
+    }
 
     /**
      * @return the JSON object of thsi object

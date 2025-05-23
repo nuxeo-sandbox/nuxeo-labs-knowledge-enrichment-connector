@@ -20,6 +20,7 @@
 package org.nuxeo.labs.hyland.knowledge.enrichment.test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -37,12 +38,15 @@ import org.junit.runner.RunWith;
 import org.nuxeo.common.utils.FileUtils;
 import org.nuxeo.ecm.automation.AutomationService;
 import org.nuxeo.ecm.automation.OperationContext;
+import org.nuxeo.ecm.automation.core.util.BlobList;
 import org.nuxeo.ecm.automation.test.AutomationFeature;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.impl.blob.FileBlob;
 import org.nuxeo.labs.hyland.knowledge.enrichment.automation.HylandKEEnrichOp;
+import org.nuxeo.labs.hyland.knowledge.enrichment.automation.HylandKEEnrichSeveralOp;
 import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
+import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
@@ -51,10 +55,6 @@ import org.nuxeo.runtime.test.runner.FeaturesRunner;
 @Features({ AutomationFeature.class, ConfigCheckerFeature.class })
 @Deploy("nuxeo-hyland-knowledge-enrichment-connector-core")
 public class TestHylandKEEnrichOp {
-
-    protected static final String TEST_IMAGE_PATH = "files/dc-3-smaller.jpg";
-
-    protected static final String TEST_IMAGE_MIMETYPE = "image/jpeg";
 
     @Inject
     protected CoreSession session;
@@ -72,9 +72,9 @@ public class TestHylandKEEnrichOp {
 
         OperationContext ctx = new OperationContext(session);
         
-        File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
+        File f = FileUtils.getResourceFileFromContext(TestHylandKEService.TEST_IMAGE_PATH);
         Blob blob = new FileBlob(f);
-        blob.setMimeType(TEST_IMAGE_MIMETYPE);
+        blob.setMimeType(TestHylandKEService.TEST_IMAGE_MIMETYPE);
         blob.setFilename(f.getName());
         ctx.setInput(blob);
         
@@ -124,5 +124,68 @@ public class TestHylandKEEnrichOp {
         // So far the service returns the value lowercase anyway (which is a problem if the list of values are from a
         // vocabulary)
         assertEquals("disney", classification.toLowerCase());
+    }
+    @Test
+    public void shouldEnrichSeveralBlobs() throws Exception {
+
+        Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
+
+        File f1 = FileUtils.getResourceFileFromContext(TestHylandKEService.TEST_IMAGE_PATH);
+        Blob blob1 = new FileBlob(f1);
+        blob1.setMimeType(TestHylandKEService.TEST_IMAGE_MIMETYPE);
+        blob1.setFilename(f1.getName());
+        
+        File f2 = FileUtils.getResourceFileFromContext(TestHylandKEService.TEST_OTHER_IMAGE_PATH);
+        Blob blo2b = new FileBlob(f1);
+        blo2b.setMimeType(TestHylandKEService.TEST_OTHER_IMAGE_MIMETYPE);
+        blo2b.setFilename(f2.getName());
+        
+        BlobList blobs = new BlobList();
+        blobs.add(blob1);
+        blobs.add(blo2b);
+
+        OperationContext ctx = new OperationContext(session);
+        ctx.setInput(blobs);
+        Map<String, Object> params = new HashMap<>();
+        params.put("actions", "image-description");
+        params.put("sourceIds", "12345,67890");
+        // no classes in this test
+        // No similarMetadat in this test
+
+        Blob resultBlob = (Blob) automationService.run(ctx, HylandKEEnrichSeveralOp.ID, params);
+        Assert.assertNotNull(resultBlob);
+        
+        ServiceCallResult result = new ServiceCallResult(resultBlob.getString());
+        assertNotNull(result);
+        
+        // Expecting HTTP OK
+        assertTrue(result.callWasSuccesful());
+        
+        JSONArray mapping = result.getObjectKeysMapping();
+        assertNotNull(mapping);
+        assertEquals(2, mapping.length());
+        // And we have our IDs
+        assertTrue(TestHylandKEService.hasValueInJSONArray(mapping, "sourceId", "12345"));
+        assertTrue(TestHylandKEService.hasValueInJSONArray(mapping, "sourceId", "67890"));
+
+        JSONObject responseJson = result.getResponseAsJSONObject();
+        String status = responseJson.getString("status");
+        assertEquals("SUCCESS", status);
+
+        JSONArray results = responseJson.getJSONArray("results");
+        assertTrue(results.length() == 2);
+        
+        //Check we have a description with the correct object Mapping
+        results.forEach(oneResult -> {
+            JSONObject resultObj = (JSONObject) oneResult;
+            
+            JSONObject descriptionObj = resultObj.getJSONObject("imageDescription");
+            assertNotNull(descriptionObj);
+            
+            String objectKey = resultObj.getString("objectKey");
+            // Must exists in the returned mapping
+            assertTrue(TestHylandKEService.hasValueInJSONArray(mapping, "objectKey", objectKey));
+        });
+        
     }
 }

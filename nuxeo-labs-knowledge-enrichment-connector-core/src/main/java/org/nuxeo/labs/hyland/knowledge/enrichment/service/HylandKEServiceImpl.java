@@ -321,21 +321,6 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         return null;
     }
 
-    /*
-     * Utility class, to avoid passing/maintaining 2, 3, 4, n parameters/variables.
-     */
-    protected class FileToProcess {
-
-        public File file;
-
-        public String mimeType;
-
-        public String presignedUrl;
-
-        public String objectKey;
-
-    }
-
     @SuppressWarnings("rawtypes")
     public ServiceCallResult enrich(List<ContentToProcess> contentObjects, List<String> actions, List<String> classes,
             String similarMetadataJsonArrayStr) throws IOException {
