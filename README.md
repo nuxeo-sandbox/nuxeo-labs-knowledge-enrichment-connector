@@ -38,12 +38,13 @@ For example, after call to the Enrichment API, the return JSON will be like:
 {
     "responseCode": 200, // The HTTP status code
     "responseMessage": "OK", // The HTTP status message
+    "objectKeysMapping": null, // null or [] when service called for a single file (see EnrichSeveral operaiton below)
     "response":// A JSON object with the following fields (see Knowledge Enrichment API doumentation)
     {
         "id": String, // The ID of the response
         "timestamp": String, // The date of the response
         "status": String, // "SUCCESS", "FAILURE" or "PARTIAL_FAILURE"
-        "results": // An array of responses, with only one element for now:
+        "results": // An array of responses, one for each file processed
         [
             {
                 "objectKey": String, // The object key (as returned by the getPresignedUrl endpoint),
@@ -77,7 +78,7 @@ See examples of Automation Script below
 
 ## Know Limitation
 
-* The service allows sending/handling files in batch, the plugin, for now, only handles a single file at a time.
+* The service allows sending/handling files in batch, the plugin, for now, handles sending several files only for the Enrich operation (see below).
 
 
 ## Nuxeo Configuration Parameters
@@ -115,6 +116,7 @@ The service returns a token valid a certain time: The plugin handles this timeou
 ## Operations
 
 * `HylandKnowledgeEnrichment.Enrich`
+* `HylandKnowledgeEnrichment.EnrichSeveral`
 * `HylandKnowledgeEnrichment.Invoke`
 * `HylandKnowledgeEnrichment.Curate`
 * `HylandKnowledgeEnrichment.Configure`
@@ -190,7 +192,7 @@ function run(input, params) {
       // a description worked, getting the embeddings failed)
       Console.error("Error calling the service:\n " + JSON.stringify(resultJson, null, 2));
     } else {
-      serviceResult = response.results[0]; // Only one for now
+      serviceResult = response.results[0]; // Only one since we sent only one file
       
       // Get the description.
       // As status is SUCCESS, no need to check descriptionObj.isSuccess 
@@ -255,7 +257,7 @@ function run(input, params) {
       // a description worked, getting the embeddings failed)
       Console.error("Error calling the service:\n " + JSON.stringify(resultJson, null, 2));
     } else {
-      serviceResult = response.results[0]; // Only one for now
+      serviceResult = response.results[0]; // Only one since we sent only one file
       
       // Get the description.
       // As status is SUCCESS, no need to check descriptionObj.isSuccess 
@@ -327,7 +329,7 @@ function run(input, params) {
       // a description worked, getitng the embeddings failed)
       Console.error("Error calling the service:\n " + JSON.stringify(resultJson, null, 2));
     } else {
-      serviceResult = response.results[0]; // Only one for now
+      serviceResult = response.results[0]; // Only one since we sent only one file
       
       // Get the classification.
       // As status is SUCCESS, no need to check descriptionObj.isSuccess 
@@ -344,6 +346,137 @@ function run(input, params) {
   
 }
 ```
+
+
+### `HylandKnowledgeEnrichment.EnrichSeveral`
+
+This operation performs the same featieres as `HylandKnowledgeEnrichment.Enrich`, but allows for hanlding several files in batch.
+
+* Input: `documents` or `blobs`
+* Output: `Blob`, a JSON blob
+* Parameters
+  * `actions`: String required. A list of comma separated actions to perform. See KE documentation about available actions
+  * `classes`: String, optional.  A list of comma separated classes, to be used with some classification actions (can be ommitted or null for other actions)
+  * `similarMetadata`: String, optional.  A JSON Array (as string) of similar metadata (array of key/value pairs). To be used with the misc. "metadata" actions.
+  *  `xpath`: String, optional. When input is `document`, the xpath to use to get the blob. Default "file:content".
+  * `sourceIds`: String, required if input is `blobs`. A comma separated list of unique ID, one for each input object (Document of Blob), _in the same order_. If input is `document` and `sourceIds`is not passed, the plugin uses each Document UUID. See below for more details. 
+
+> [!IMPORTANT]
+> Make sure the files are of the same kind, supporting the `actions` request. For example, do not mix images and PDFs if you ask for image-description. Or do not pass images and PDFs ans ask for both image-description and text-summarization. This is because the service, in this case, will return a global PARTIAL_FAILURE, and for each file, a failure for the requested action when the file is not of the good type.
+
+#### About `sourceIds`
+When calling the service for several files, it returns an array of results. Each single result holds a property, `objectKey`, that is unique. The plugin also returns an array used for the mapping. This arrays is stored in the `objectKeysMapping` property and contains objects with 2 fields:
+
+* `sourceId`: The value as it was passed
+* `objectKey`:  The corresponding `objectKey`.
+
+This way, when looping the results, for each result you can:
+
+1. Get the `objectId` of the content that was processed
+2. Find this value in the `objectKeysMapping`
+3. Act accordingly (typically, get a the corresponding document, store values in fields)
+
+#### Example with Documents
+
+Say we have a list of Picture, for example, after a query. We want the image-description for each of them, calling in a batch.
+
+```javascript
+function run(input, params) {
+  
+  var docs, resultDocs, oneDoc, blobs, jpeg, blob, i, sourceIds,
+      result, resultJson, results,
+      objectKeysMapping, response, objKey, sourceId;
+  
+  // ... docs is a list of Picture filled previously...
+  // Fill sourceIds and blobs
+  // We will send the jpeg rendition for each
+  sourceIds = [];
+  blobs = [];
+  for(i = 0; i < docs.size(); i++) {
+    oneDoc = docs[i];
+    sourceIds.push(oneDoc.id);
+    
+    jpeg = Picture.GetView(input, {'viewName': 'FullHD'});
+    blobs.push(jpeg);
+    
+  }
+  
+  // Initialize result
+  resultDocs = [];
+  
+  // Call operation
+  HylandKnowledgeEnrichment.EnrichSeveral(
+    blobs, {
+      'actions': "image-description",
+      // "classes": not used here. Could be passed "" or null,
+      // "similarMetadataJsonArrayStr": not used here Could be passed "" or null
+      'sourceIds': sourceIds.join(),
+      //'xpath': 
+    });
+
+  // Do not forget to use the getString() method :-)
+  resultJson = JSON.parse(result.getString());
+  
+  Console.log("Calling the service, response code: " + resultJson.responseCode);
+  if(resultJson.responseCode !== 200) {
+    Console.error("Error calling the service:\n " + JSON.stringify(resultJson, null, 2));
+  } else {
+    // Get the array of mappings
+    objectKeysMapping = resultJson.objectKeysMapping;
+    
+    // Get the array of results
+    response = resultJson.response;
+    if(response.status !== "SUCCESS") {
+      // (we could handle PARTIAL FAILURE. It means for example getting
+      // a description worked, getitng the embeddings failed)
+      Console.error("Error calling the service:\n " + JSON.stringify(resultJson, null, 2));
+    } else {
+      // Loop the results
+      resultJson.results.forEach(function(oneResult) {
+        // description.
+        descriptionObj = oneResult.imageDescription;
+        // ... if handling PARTIAL_FAILURE, you shoudl check descriptionObj.isSuccess...
+        
+        // Get the key
+        objKey = oneResult.objectKey;
+        // deduce the source doc ID
+        sourceId = getSourceIdByObjectKey(objectKeysMapping, objKey);
+        if(!sourceId) {
+          Console.warn("sourceId not found for objectKey " + objKey);
+        } else {
+          // Load the Document
+          oneDoc = Repository.GetDocument(null, {'value': sourceid});
+          
+          // Set-up description
+          oneDoc["dc:description"] = descriptionObj.result;
+          
+          // Save
+          oneDoc = Document.Save(oneDoc, {});
+          resultDocs.push(oneDoc);
+        }
+        
+      });
+    }
+  }
+  
+  return resultDocs;
+
+}
+
+// Can't us ARRAY.find() of ECMAScript6, halas.
+function getSourceIdByObjectKey(objectKeysMapping, targetKey) {
+  for (var i = 0; i < objectKeysMapping.length; i++) {
+    if (objectKeysMapping[i].objectKey === targetKey) {
+      return objectKeysMapping[i].sourceId;
+    }
+  }
+  return null;
+}
+```
+
+
+
+
 
 ### `HylandKnowledgeEnrichment.Invoke`
 
