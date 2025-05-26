@@ -405,7 +405,7 @@ function run(input, params) {
   resultDocs = [];
   
   // Call operation
-  HylandKnowledgeEnrichment.EnrichSeveral(
+  result = HylandKnowledgeEnrichment.EnrichSeveral(
     blobs, {
       'actions': "image-description",
       // "classes": not used here. Could be passed "" or null,
