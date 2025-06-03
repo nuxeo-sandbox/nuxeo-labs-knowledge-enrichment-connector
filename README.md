@@ -132,6 +132,7 @@ A high level operation that handles all the different calls to the service (get 
   * `actions`: String required. A list of comma separated actions to perform. See KE documentation about available actions
   * `classes`: String, optional.  A list of comma separated classes, to be used with some classification actions (can be ommitted or null for other actions)
   * `similarMetadata`: String, optional.  A JSON Array (as string) of similar metadata (array of key/value pairs). To be used with the misc. "metadata" actions.
+  * `extraJsonPayloadStr`: String, optional. A JSON object as string, with extra parameters for the service. For example, use "maxWordCount" to increase or decrease the text-summary. This parameter is also useful in case the service adds more tuning in the misc. calls => no need to wait for a plugin update, just change your payload. 
 
 > [!NOTE]
 > Again, please, see Knowledge Enrichment API documentation for details on the values that can be used/passed.
@@ -358,6 +359,7 @@ This operation performs the same featieres as `HylandKnowledgeEnrichment.Enrich`
   * `actions`: String required. A list of comma separated actions to perform. See KE documentation about available actions
   * `classes`: String, optional.  A list of comma separated classes, to be used with some classification actions (can be ommitted or null for other actions)
   * `similarMetadata`: String, optional.  A JSON Array (as string) of similar metadata (array of key/value pairs). To be used with the misc. "metadata" actions.
+  * `extraJsonPayloadStr`: String, optional. A JSON object as string, with extra parameters for the service. For example, use "maxWordCount" to increase or decrease the text-summary. This parameter is also useful in case the service adds more tuning in the misc. calls => no need to wait for a plugin update, just change your payload.
   *  `xpath`: String, optional. When input is `document`, the xpath to use to get the blob. Default "file:content".
   * `sourceIds`: String, required if input is `blobs`. A comma separated list of unique ID, one for each input object (Document of Blob), _in the same order_. If input is `document` and `sourceIds`is not passed, the plugin uses each Document UUID. See below for more details. 
 

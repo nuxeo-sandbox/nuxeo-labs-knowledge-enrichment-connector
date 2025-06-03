@@ -45,10 +45,13 @@ public class HylandKEEnrichOp {
     protected String actions;
 
     @Param(name = "classes", required = false)
-    protected String classes;
+    protected String classes = null;
 
     @Param(name = "similarMetadataJsonArrayStr", required = false)
-    protected String similarMetadataJsonArrayStr;
+    protected String similarMetadataJsonArrayStr = null;
+
+    @Param(name = "extraJsonPayloadStr", required = false)
+    protected String extraJsonPayloadStr = null;
 
     @Context
     protected HylandKEService ciService;
@@ -65,7 +68,7 @@ public class HylandKEEnrichOp {
 
         ServiceCallResult result;
         try {
-            result = ciService.enrich(blob, theActions, theClasses, similarMetadataJsonArrayStr);
+            result = ciService.enrich(blob, theActions, theClasses, similarMetadataJsonArrayStr, extraJsonPayloadStr);
         } catch (IOException e) {
             throw new NuxeoException(e);
         }

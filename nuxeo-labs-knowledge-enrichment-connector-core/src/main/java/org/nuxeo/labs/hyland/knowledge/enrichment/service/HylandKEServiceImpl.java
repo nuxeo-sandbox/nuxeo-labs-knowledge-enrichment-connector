@@ -323,7 +323,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
 
     @SuppressWarnings("rawtypes")
     public ServiceCallResult enrich(List<ContentToProcess> contentObjects, List<String> actions, List<String> classes,
-            String similarMetadataJsonArrayStr) throws IOException {
+            String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
 
         ServiceCallResult result = null;
         JSONObject serviceResponse;
@@ -378,7 +378,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
                                                 .map(ContentToProcess::getObjectKey)
                                                 .collect(Collectors.toList());
         
-        JSONObject payload = buildProcessActionPayload(objectKeys, actions, classes, similarMetadataJsonArrayStr);
+        JSONObject payload = buildProcessActionPayload(objectKeys, actions, classes, similarMetadataJsonArrayStr, extraJsonPayloadStr);
         result = invokeEnrichment("POST", "/api/content/process", payload.toString());
         if (result.callFailed()) {
             return result;
@@ -416,7 +416,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
     }
 
     public ServiceCallResult enrich(Blob blob, List<String> actions, List<String> classes,
-            String similarMetadataJsonArrayStr) throws IOException {
+            String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
 
         String mimeType = blob.getMimeType();
         if (StringUtils.isBlank(mimeType)) {
@@ -426,12 +426,12 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         }
 
         try (CloseableFile closFile = blob.getCloseableFile()) {
-            return enrich(closFile.getFile(), mimeType, actions, classes, similarMetadataJsonArrayStr);
+            return enrich(closFile.getFile(), mimeType, actions, classes, similarMetadataJsonArrayStr, extraJsonPayloadStr);
         }
     }
 
     protected JSONObject buildProcessActionPayload(List<String> objectKeys, List<String> actions, List<String> classes,
-            String similarMetadataJsonArrayStr) {
+            String similarMetadataJsonArrayStr, String extraJsonPayloadStr) {
 
         JSONObject payload = new JSONObject();
         payload.put("objectKeys", new JSONArray(objectKeys));
@@ -446,6 +446,13 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         } else {
             payload.put("classes", new JSONArray(classes));
         }
+        
+        if(StringUtils.isNoneBlank(extraJsonPayloadStr)) {
+            JSONObject extraJsonPayload = new JSONObject(extraJsonPayloadStr);
+            for (String key : JSONObject.getNames(extraJsonPayload)) {
+                payload.put(key, extraJsonPayload.get(key));
+            }
+        }
 
         return payload;
     }
@@ -459,7 +466,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
      * 6. Pull results
      */
     public ServiceCallResult enrich(File file, String mimeType, List<String> actions, List<String> classes,
-            String similarMetadataJsonArrayStr) throws IOException {
+            String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
 
         ServiceCallResult result;
         JSONObject serviceResponse;
@@ -493,7 +500,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
 
         // 5. Process
         JSONObject payload = buildProcessActionPayload(List.of(objectKey), actions, classes,
-                similarMetadataJsonArrayStr);
+                similarMetadataJsonArrayStr, extraJsonPayloadStr);
         result = invokeEnrichment("POST", "/api/content/process", payload.toString());
         if (result.callFailed()) {
             return result;

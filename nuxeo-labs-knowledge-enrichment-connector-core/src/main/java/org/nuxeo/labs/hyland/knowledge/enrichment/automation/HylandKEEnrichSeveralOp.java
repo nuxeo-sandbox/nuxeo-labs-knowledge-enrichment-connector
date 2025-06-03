@@ -58,57 +58,60 @@ public class HylandKEEnrichSeveralOp {
 
     @Param(name = "similarMetadataJsonArrayStr", required = false)
     protected String similarMetadataJsonArrayStr;
-    
+
+    @Param(name = "extraJsonPayloadStr", required = false)
+    protected String extraJsonPayloadStr = null;
+
     @Param(name = "xpath", required = false)
     protected String xpath = "file:content";
-    
+
     @Param(name = "sourceIds", required = false)
     protected String sourceIds;
 
     @Context
     protected HylandKEService ciService;
-    
+
     @OperationMethod
     public Blob run(DocumentModelList docs) {
-        
+
         BlobList blobs = new BlobList();
-        
-        if(StringUtils.isBlank(sourceIds)) {
+
+        if (StringUtils.isBlank(sourceIds)) {
             List<String> ids = new ArrayList<String>();
-            for(DocumentModel doc : docs) {
+            for (DocumentModel doc : docs) {
                 ids.add(doc.getId());
             }
             sourceIds = String.join(",", ids);
         }
-        
-        for(DocumentModel doc : docs) {
-            blobs.add((Blob)doc.getPropertyValue(xpath));
+
+        for (DocumentModel doc : docs) {
+            blobs.add((Blob) doc.getPropertyValue(xpath));
         }
-        
+
         return run(blobs);
     }
 
     @OperationMethod
     public Blob run(BlobList blobs) {
-        
-        if(StringUtils.isBlank(sourceIds)) {
+
+        if (StringUtils.isBlank(sourceIds)) {
             throw new NuxeoException("sourceIds is required.");
         }
 
         List<String> sourceIdsArray = Arrays.stream(sourceIds.split(",")).map(String::trim).toList();
-        if(sourceIdsArray.size() != blobs.size()) {
+        if (sourceIdsArray.size() != blobs.size()) {
             throw new NuxeoException("The number od IDs in sourceIds is different than the number of blobs.");
         }
-        
+
         @SuppressWarnings("rawtypes")
         List<ContentToProcess> contentToProcess = new ArrayList<ContentToProcess>();
         int idx = -1;
-        for(Blob blob : blobs) {
+        for (Blob blob : blobs) {
             idx += 1;
             ContentToProcess<Blob> oneContent = new ContentToProcess<Blob>(sourceIdsArray.get(idx), blob);
             contentToProcess.add(oneContent);
         }
-        
+
         List<String> theActions = Arrays.stream(actions.split(",")).map(String::trim).toList();
 
         List<String> theClasses = null;
@@ -118,7 +121,8 @@ public class HylandKEEnrichSeveralOp {
 
         ServiceCallResult result;
         try {
-            result = ciService.enrich(contentToProcess, theActions, theClasses, similarMetadataJsonArrayStr);
+            result = ciService.enrich(contentToProcess, theActions, theClasses, similarMetadataJsonArrayStr,
+                    extraJsonPayloadStr);
         } catch (IOException e) {
             throw new NuxeoException(e);
         }

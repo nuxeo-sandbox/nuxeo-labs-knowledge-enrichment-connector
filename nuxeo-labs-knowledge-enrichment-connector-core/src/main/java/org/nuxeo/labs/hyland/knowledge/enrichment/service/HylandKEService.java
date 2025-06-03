@@ -53,7 +53,7 @@ public interface HylandKEService {
      * @since 2023
      */
     public ServiceCallResult enrich(Blob blob, List<String> actions, List<String> classes,
-            String similarMetadataJsonArrayStr) throws IOException;
+            String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException;
 
     /**
      * See method
@@ -69,7 +69,7 @@ public interface HylandKEService {
      * @since 2023
      */
     public ServiceCallResult enrich(File file, String mimeType, List<String> actions, List<String> classes,
-            String similarMetadataJsonArrayStr) throws IOException;
+            String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException;
 
     /**
      * Enrich a list of blobs
@@ -85,7 +85,7 @@ public interface HylandKEService {
      * @since TODO
      */
     public ServiceCallResult enrich(List<ContentToProcess> contentObjects, List<String> actions, List<String> classes,
-            String similarMetadataJsonArrayStr) throws IOException;
+            String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException;
     
     /**
      * Enrich a list of File

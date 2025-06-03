@@ -54,6 +54,8 @@ public class TestHylandKEService {
 
     public static final String TEST_CONTRACT_PATH = "files/samplecontract.pdf";
 
+    public static final String TEST_CONTRACT_MIMETYPE = "application/pdf";
+
     public static final String TEST_IMAGE_MIMETYPE = "image/jpeg";
 
     public static final String TEST_OTHER_IMAGE_MIMETYPE = "image/png";
@@ -128,7 +130,7 @@ public class TestHylandKEService {
 
         File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
         ServiceCallResult result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-description"), null,
-                null);
+                null, null);
         assertNotNull(result);
 
         /*
@@ -181,7 +183,7 @@ public class TestHylandKEService {
 
         File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
         ServiceCallResult result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-embeddings"), null,
-                null);
+                null, null);
         assertNotNull(result);
 
         // Expecting HTTP OK
@@ -207,7 +209,7 @@ public class TestHylandKEService {
 
         File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
         ServiceCallResult result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-classification"),
-                List.of("Disney", "DC Comics", "Marvel"), null);
+                List.of("Disney", "DC Comics", "Marvel"), null, null);
         assertNotNull(result);
 
         // Expecting HTTP OK
@@ -236,7 +238,7 @@ public class TestHylandKEService {
         File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
         ServiceCallResult result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE,
                 List.of("image-description", "image-embeddings", "image-classification"),
-                List.of("Disney", "DC Comics", "Marvel"), null);
+                List.of("Disney", "DC Comics", "Marvel"), null, null);
         assertNotNull(result);
 
         // Expecting HTTP OK
@@ -297,28 +299,28 @@ public class TestHylandKEService {
                    "dc:rights": "RESTRICTED",
                  }]
                                """;
-        
+
         similarMetadata = """
-                [
-        {
-            "event:location": "New Bristol, Terranova",
-            "keywords:tags": "economy|markets|Noventis|GEF|Terranova|report",
-            "something:here": "Landscape photography, Nature photography, Macro photography",
-            "referenceL list:list": [
-                "Getty Images: Times Square, New York City",
-                "Shutterstock Editorial: Times Square NYC",
-                "National Geographic Photo Archive: Times Square",
-                "New York Public Library Digital Collections: Times Square",
-                "Lonely Planet: Times Square Photo Guide"
-            ],
-            "summary:text": "This report provides a comprehensive analysis of financial trends and investment opportunities across emerging markets in the Terranova region, focusing on the strategies employed by Noventis Group."
-        }
-    ]
-                """;
-        
+                            [
+                    {
+                        "event:location": "New Bristol, Terranova",
+                        "keywords:tags": "economy|markets|Noventis|GEF|Terranova|report",
+                        "something:here": "Landscape photography, Nature photography, Macro photography",
+                        "referenceL list:list": [
+                            "Getty Images: Times Square, New York City",
+                            "Shutterstock Editorial: Times Square NYC",
+                            "National Geographic Photo Archive: Times Square",
+                            "New York Public Library Digital Collections: Times Square",
+                            "Lonely Planet: Times Square Photo Guide"
+                        ],
+                        "summary:text": "This report provides a comprehensive analysis of financial trends and investment opportunities across emerging markets in the Terranova region, focusing on the strategies employed by Noventis Group."
+                    }
+                ]
+                            """;
+
         File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
         ServiceCallResult result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-metadata-generation"),
-                null, similarMetadata);
+                null, similarMetadata, null);
         assertNotNull(result);
 
         // Expecting HTTP OK
@@ -331,21 +333,21 @@ public class TestHylandKEService {
         JSONArray results = responseJson.getJSONArray("results");
         JSONObject theResult = results.getJSONObject(0);
         assertNotNull(theResult);
-        
+
         JSONObject metadata = theResult.getJSONObject("metadata");
         assertNotNull(metadata);
         JSONObject metadataResult = metadata.getJSONObject("result");
         assertNotNull(metadataResult);
-        
+
         // Given the fake similar metadata, it should find at least TheSource and "custom"
         String value = metadataResult.getString("dc:source");
         assertEquals("TheSource", value);
-        
+
         value = metadataResult.getString("dc:format");
         assertEquals("custom", value);
-        
+
     }
-    
+
     /**
      * Shared utility.
      * 
@@ -356,38 +358,34 @@ public class TestHylandKEService {
      * @since 2023
      */
     public static boolean hasValueInJSONArray(JSONArray array, String key, String searchStr) {
-        
-        for(int i = 0; i < array.length(); i++) {
+
+        for (int i = 0; i < array.length(); i++) {
             JSONObject obj = array.getJSONObject(i);
             String value = obj.getString(key);
-            if(StringUtils.equals(searchStr, value)) {
+            if (StringUtils.equals(searchStr, value)) {
                 return true;
             }
         }
-        
+
         return false;
     }
 
-    
     @Test
     public void shouldGetDescriptionOnSeveralImages() throws Exception {
-        
+
         File f1 = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
         File f2 = FileUtils.getResourceFileFromContext(TEST_OTHER_IMAGE_PATH);
-        
+
         @SuppressWarnings("rawtypes")
-        List<ContentToProcess> content = List.of(
-                new ContentToProcess<File>("12345", f1),
-                new ContentToProcess<File>("67890", f2)
-        );
-        
-        ServiceCallResult result = hylandKEService.enrich(content, List.of("image-description"), null,
-                null);
+        List<ContentToProcess> content = List.of(new ContentToProcess<File>("12345", f1),
+                new ContentToProcess<File>("67890", f2));
+
+        ServiceCallResult result = hylandKEService.enrich(content, List.of("image-description"), null, null, null);
         assertNotNull(result);
-        
+
         // Expecting HTTP OK
         assertTrue(result.callWasSuccesful());
-        
+
         JSONArray mapping = result.getObjectKeysMapping();
         assertNotNull(mapping);
         assertEquals(2, mapping.length());
@@ -401,14 +399,14 @@ public class TestHylandKEService {
 
         JSONArray results = responseJson.getJSONArray("results");
         assertTrue(results.length() == 2);
-        
-        //Check we have a description with the correct object Mapping
+
+        // Check we have a description with the correct object Mapping
         results.forEach(oneResult -> {
             JSONObject resultObj = (JSONObject) oneResult;
-            
+
             JSONObject descriptionObj = resultObj.getJSONObject("imageDescription");
             assertNotNull(descriptionObj);
-            
+
             String objectKey = resultObj.getString("objectKey");
             // Must exists in the returned mapping
             assertTrue(hasValueInJSONArray(mapping, "objectKey", objectKey));
@@ -451,6 +449,70 @@ public class TestHylandKEService {
 
         JSONObject responseJson = result.getResponseAsJSONObject();
         assertNotNull(responseJson);
+    }
+    
+    protected JSONObject getTextSummaryObject(ServiceCallResult result) {
+        
+        JSONObject responseJson = result.getResponseAsJSONObject();
+        
+        JSONArray results = responseJson.getJSONArray("results");
+        JSONObject theResult = results.getJSONObject(0);
+        JSONObject summaryObj = theResult.getJSONObject("textSummary");
+        
+        return summaryObj;
+    }
+
+    @Test
+    public void shouldSummarizeText() throws Exception {
+
+        Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
+
+        File f = FileUtils.getResourceFileFromContext(TEST_CONTRACT_PATH);
+
+        ServiceCallResult result = hylandKEService.enrich(f, TEST_CONTRACT_MIMETYPE, List.of("text-summarization"),
+                null, null, null);
+        assertNotNull(result);
+        
+        // Expecting HTTP OK
+        assertTrue(result.callWasSuccesful());
+        
+        JSONObject summaryObj = getTextSummaryObject(result);
+        assertTrue(summaryObj.getBoolean("isSuccess"));
+        
+        String summary = summaryObj.getString("result");
+        assertTrue(StringUtils.isNotBlank(summary));        
+
+    }
+    
+    @Test
+    public void shouldUseMaxWordCount() throws Exception {
+
+        Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
+
+        File f = FileUtils.getResourceFileFromContext(TEST_CONTRACT_PATH);
+
+        ServiceCallResult result = hylandKEService.enrich(f, TEST_CONTRACT_MIMETYPE, List.of("text-summarization"),
+                null, null, null);
+        assertNotNull(result);
+        
+        // Here we skip result.callWasSuccesful() etc.
+        
+        JSONObject summaryObj = getTextSummaryObject(result);
+        String summary1 = summaryObj.getString("result");
+        
+        // Now, same call, few words
+        result = hylandKEService.enrich(f, TEST_CONTRACT_MIMETYPE, List.of("text-summarization"),
+                null, null, "{\"maxWordCount\": 50}");
+        assertNotNull(result);
+        
+        summaryObj = getTextSummaryObject(result);
+        String summary2 = summaryObj.getString("result");
+        
+        int z = summary1.length();
+        int r = summary2.length();
+        
+        assertTrue(summary1.length() > summary2.length());
+
     }
 
 }
