@@ -383,9 +383,8 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         if (result.callFailed()) {
             return result;
         }
-        // "/api/content/process" returns a string, not JSON...
-        serviceResponse = result.forceResponseAsJSONObject();
-        String resultId = serviceResponse.getString("result");
+        serviceResponse = result.getResponseAsJSONObject();
+        String resultId = serviceResponse.getString("processingId");
 
         // 6. Get results (loop to check when done)
         result = pullEnrichmentResults(resultId);
@@ -505,7 +504,6 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         if (result.callFailed()) {
             return result;
         }
-        // "/api/content/process" returns a string, not JSON...
         serviceResponse = result.getResponseAsJSONObject();
         String resultId = serviceResponse.getString("processingId");
 
