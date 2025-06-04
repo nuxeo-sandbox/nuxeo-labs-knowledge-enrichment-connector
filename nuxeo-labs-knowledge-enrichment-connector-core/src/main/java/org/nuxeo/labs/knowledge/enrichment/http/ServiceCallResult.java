@@ -76,7 +76,15 @@ public class ServiceCallResult {
 
         JSONObject obj = new JSONObject();
 
-        obj.put("response", new JSONObject(response));
+        if(StringUtils.isNotBlank(response)) {
+            obj.put("response", new JSONObject(response));
+        } else {
+            if(isHttpSuccess(responseCode)) {
+                obj.put("response", new JSONObject("{\"errorMessage\": \"Empty string as response\"}"));
+            } else {
+                obj.put("response", new JSONObject("{}"));
+            }
+        }
         obj.put("responseCode", responseCode);
         obj.put("responseMessage", (responseMessage == null ? "" : responseMessage));
         obj.put("objectKeysMapping", objectKeysMapping);
@@ -205,11 +213,27 @@ public class ServiceCallResult {
     }
 
     /**
+     * @return true if responseCode is 200
+     * @since 2023
+     */
+    public boolean callResponseOK() {
+        return responseCode == 200;
+    }
+
+    /**
      * @return true if responseCode is not in the "OK" range
      * @since 2023
      */
     public boolean callFailed() {
         return !isHttpSuccess(responseCode);
+    }
+
+    /**
+     * @return true if statusCode is 200
+     * @since 2023
+     */
+    public static boolean isHttpOk(int statusCode) {
+        return statusCode == 200;
     }
 
     /**

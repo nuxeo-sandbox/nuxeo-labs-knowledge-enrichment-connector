@@ -506,8 +506,8 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
             return result;
         }
         // "/api/content/process" returns a string, not JSON...
-        serviceResponse = result.forceResponseAsJSONObject();
-        String resultId = serviceResponse.getString("result");
+        serviceResponse = result.getResponseAsJSONObject();
+        String resultId = serviceResponse.getString("processingId");
 
         // 6. Get results (loop to check when done)
         result = pullEnrichmentResults(resultId);
@@ -608,7 +608,8 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
             result = invokeEnrichment("GET", "/api/content/process/" + resultId + "/results", null);
             count += 1;
 
-        } while (result.callFailed() && count <= pullResultsMaxTries);
+            // We must get an OK. A 202 "Accepted" for example does not have the full response.
+        } while (!result.callResponseOK() && count <= pullResultsMaxTries);
 
         return result;
     }
