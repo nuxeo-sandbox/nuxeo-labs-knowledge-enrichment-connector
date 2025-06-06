@@ -21,13 +21,14 @@ package org.nuxeo.labs.hyland.knowledge.enrichment.service;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
-import org.nuxeo.ecm.automation.core.util.BlobList;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
 
+@SuppressWarnings("rawtypes")
 public interface HylandKEService {
+
+    
 
     /**
      * High level call performing all the different serial requests to the service (authenticate, then ask for presigned
@@ -36,13 +37,6 @@ public interface HylandKEService {
      * For the values to pass in <code>actions</code>, <code>classes</code> and <code>similarmetadata</code>, see
      * the service documentation at
      * {@link https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment/ContextEnrichmentAPI}
-     * <br>
-     * The returned String is JSON String with 3 fields:
-     * {
-     * "responseCode": The HTTP response of the service when performoing the call. Should be a succesful range (200-299)
-     * "responseMessage": The HTTP response message (like "OK")
-     * "response": The response (as JSON string from the service
-     * }
      * 
      * @param blob
      * @param actions
@@ -60,7 +54,7 @@ public interface HylandKEService {
      * <code>enrich(Blob blob, List<String> actions, List<String> classes, List<String> similarMetadata)</code>
      * 
      * @param file
-     * @param mimeType
+     * @param mimeType. If null or "", it will be calculated (can take time)
      * @param actions
      * @param classes
      * @param similarMetadata
@@ -74,8 +68,6 @@ public interface HylandKEService {
     /**
      * Enrich a list of blobs
      * 
-     * TO BE IMPROVED: The caller has no way to link the results to the input blobs
-     * 
      * @param blobs
      * @param actions
      * @param classes
@@ -86,10 +78,9 @@ public interface HylandKEService {
      */
     public ServiceCallResult enrich(List<ContentToProcess> contentObjects, List<String> actions, List<String> classes,
             String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException;
-    
+
     /**
      * Enrich a list of File
-     * 
      * TO BE IMPROVED: The caller has no way to link the results to the input files
      * 
      * @param blobs
@@ -101,9 +92,9 @@ public interface HylandKEService {
      * @since TODO
      */
     /*
-    public ServiceCallResult enrich(List<ContentToProcess> files, List<String> actions, List<String> classes,
-            String similarMetadataJsonArrayStr) throws IOException;
-*/
+     * public ServiceCallResult enrich(List<ContentToProcess> files, List<String> actions, List<String> classes,
+     * String similarMetadataJsonArrayStr) throws IOException;
+     */
     /**
      * Call the KE service, using the configuration parameters (clientId, clientSecret, endpoints, …). This is a kind of
      * "low-level" call to the service.

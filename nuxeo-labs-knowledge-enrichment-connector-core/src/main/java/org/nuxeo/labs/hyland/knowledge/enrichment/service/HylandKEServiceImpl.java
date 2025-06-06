@@ -29,9 +29,11 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -321,6 +323,17 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         return null;
     }
 
+    //@Override
+    public ServiceCallResult getJobIdResult(String jobId) {
+        
+        ServiceCallResult result = null;
+        
+        result = invokeEnrichment("GET", "/api/content/process/" + jobId + "/results", null);
+        
+        return result;
+    }
+    
+    @Override
     @SuppressWarnings("rawtypes")
     public ServiceCallResult enrich(List<ContentToProcess> contentObjects, List<String> actions, List<String> classes,
             String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
@@ -414,19 +427,20 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         return result;
     }
 
+    @Override
     public ServiceCallResult enrich(Blob blob, List<String> actions, List<String> classes,
             String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
+        
+        String uuid = "ABC";// Sending a sngle blob => no need for UUID and all
 
-        String mimeType = blob.getMimeType();
-        if (StringUtils.isBlank(mimeType)) {
-            // This can happen when Blob is built manually
-            MimetypeRegistry registry = Framework.getService(MimetypeRegistry.class);
-            mimeType = registry.getMimetypeFromBlob(blob);
-        }
-
-        try (CloseableFile closFile = blob.getCloseableFile()) {
-            return enrich(closFile.getFile(), mimeType, actions, classes, similarMetadataJsonArrayStr, extraJsonPayloadStr);
-        }
+        @SuppressWarnings("rawtypes")
+        List<ContentToProcess> contentToProcess = new ArrayList<ContentToProcess>();
+        ContentToProcess<Blob> oneContent = new ContentToProcess<Blob>(uuid, blob);
+        contentToProcess.add(oneContent);
+        
+        ServiceCallResult result = enrich(contentToProcess, actions, classes, similarMetadataJsonArrayStr, extraJsonPayloadStr);
+        
+        return result;
     }
 
     protected JSONObject buildProcessActionPayload(List<String> objectKeys, List<String> actions, List<String> classes,
@@ -456,78 +470,23 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         return payload;
     }
 
-    /*
-     * 1. Get Auth token
-     * 2. Get presigned URL
-     * 3. Upload file to this URL
-     * 4. OPT: Get available actions
-     * 5. Process
-     * 6. Pull results
-     */
+    @Override
     public ServiceCallResult enrich(File file, String mimeType, List<String> actions, List<String> classes,
             String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
+        
+        String uuid = "ABC";// Sending a sngle blob => no need for UUID and all
 
-        ServiceCallResult result;
-        JSONObject serviceResponse;
-
-        if (StringUtils.isBlank(mimeType)) {
-            MimetypeRegistry registry = Framework.getService(MimetypeRegistry.class);
-            mimeType = registry.getMimetypeFromFile(file);
-        }
-
-        // (1. Token will be handled at first call)
-
-        // 2. Get presigned URL
-        result = invokeEnrichment("GET", "/api/files/upload/presigned-url?contentType=" + mimeType.replace("/", "%2F"),
-                null);
-        if (result.callFailed()) {
-            return result;
-        }
-
-        serviceResponse = result.getResponseAsJSONObject();
-        String presignedUrl = serviceResponse.getString("presignedUrl");
-        String objectKey = serviceResponse.getString("objectKey");
-
-        // 3. Upload file to this URL
-        result = serviceCall.uploadFileWithPut(file, presignedUrl, mimeType);
-        if (result.callFailed()) {
-            return result;
-        }
-
-        // 4. Get available actions
-        // Not needed here
-
-        // 5. Process
-        JSONObject payload = buildProcessActionPayload(List.of(objectKey), actions, classes,
-                similarMetadataJsonArrayStr, extraJsonPayloadStr);
-        result = invokeEnrichment("POST", "/api/content/process", payload.toString());
-        if (result.callFailed()) {
-            return result;
-        }
-        serviceResponse = result.getResponseAsJSONObject();
-        String resultId = serviceResponse.getString("processingId");
-
-        // 6. Get results (loop to check when done)
-        result = pullEnrichmentResults(resultId);
-
+        @SuppressWarnings("rawtypes")
+        List<ContentToProcess> contentToProcess = new ArrayList<ContentToProcess>();
+        ContentToProcess<File> oneContent = new ContentToProcess<File>(uuid, file);
+        contentToProcess.add(oneContent);
+        
+        ServiceCallResult result = enrich(contentToProcess, actions, classes, similarMetadataJsonArrayStr, extraJsonPayloadStr);
+        
         return result;
     }
 
-    /*
-     * 1. Get Auth token
-     * 2. Get presigned URLs (put and get)
-     * 3. Upload file to this URL
-     * 4. Pull results
-     * jsonOptions => see API documentation. As of May 2025:
-     * {
-     * "normalization": {
-     * "quotations": true
-     * },
-     * "chunking": true,
-     * "embedding": true,
-     * "json_schema": "MDAST", "FULL" or "PIPELINE"
-     * }
-     */
+    @Override
     public ServiceCallResult curate(Blob blob, String jsonOptions) throws IOException {
 
         try (CloseableFile closFile = blob.getCloseableFile()) {
@@ -535,6 +494,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         }
     }
 
+    @Override
     public ServiceCallResult curate(File file, String jsonOptions) throws IOException {
 
         ServiceCallResult result;
@@ -603,7 +563,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
                         + pullResultsMaxTries + ")");
             }
 
-            result = invokeEnrichment("GET", "/api/content/process/" + resultId + "/results", null);
+            result = getJobIdResult(resultId);
             count += 1;
 
             // We must get an OK. A 202 "Accepted" for example does not have the full response.

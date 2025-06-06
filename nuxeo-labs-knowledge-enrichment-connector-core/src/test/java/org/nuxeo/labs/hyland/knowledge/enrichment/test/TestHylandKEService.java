@@ -300,24 +300,6 @@ public class TestHylandKEService {
                  }]
                                """;
 
-        similarMetadata = """
-                            [
-                    {
-                        "event:location": "New Bristol, Terranova",
-                        "keywords:tags": "economy|markets|Noventis|GEF|Terranova|report",
-                        "something:here": "Landscape photography, Nature photography, Macro photography",
-                        "referenceL list:list": [
-                            "Getty Images: Times Square, New York City",
-                            "Shutterstock Editorial: Times Square NYC",
-                            "National Geographic Photo Archive: Times Square",
-                            "New York Public Library Digital Collections: Times Square",
-                            "Lonely Planet: Times Square Photo Guide"
-                        ],
-                        "summary:text": "This report provides a comprehensive analysis of financial trends and investment opportunities across emerging markets in the Terranova region, focusing on the strategies employed by Noventis Group."
-                    }
-                ]
-                            """;
-
         File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
         ServiceCallResult result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-metadata-generation"),
                 null, similarMetadata, null);
@@ -334,7 +316,7 @@ public class TestHylandKEService {
         JSONObject theResult = results.getJSONObject(0);
         assertNotNull(theResult);
 
-        JSONObject metadata = theResult.getJSONObject("metadata");
+        JSONObject metadata = theResult.getJSONObject("imageMetadata");
         assertNotNull(metadata);
         JSONObject metadataResult = metadata.getJSONObject("result");
         assertNotNull(metadataResult);
