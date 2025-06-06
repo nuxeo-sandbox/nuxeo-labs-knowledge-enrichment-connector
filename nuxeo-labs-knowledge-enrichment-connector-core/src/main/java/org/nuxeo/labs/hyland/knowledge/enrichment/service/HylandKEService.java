@@ -28,7 +28,79 @@ import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
 @SuppressWarnings("rawtypes")
 public interface HylandKEService {
 
-    
+    /**
+     * Send the blob for enrichment. In the response, and if succesful, there will be the job ID to use with
+     * getJobIdResult(). Also, <copde>sourceid</sourceId> is optional. I is returned in the result (see 
+     * ServiceCallResult#objectKeysMapping) and let the caller bind the job ID with the input blob.
+     * If not passed, a random UUID is generated.
+     * <br>
+     * For the values to pass in <code>actions</code>, <code>classes</code> and <code>similarmetadata</code>, see
+     * the service documentation at
+     * {@link https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment/ContextEnrichmentAPI}
+     * 
+     * @param blob
+     * @param sourceId
+     * @param actions
+     * @param classes
+     * @param similarMetadataJsonArrayStr
+     * @param extraJsonPayloadStr
+     * @return
+     * @throws IOException
+     * @since TODO
+     */
+    public ServiceCallResult sendForEnrichment(Blob blob, String sourceId, List<String> actions, List<String> classes,
+            String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException;
+
+    /**
+     * Send the file for enrichment. In the response, and if succesful, there will be the job ID to use with
+     * getJobIdResult(). Also, <copde>sourceid</sourceId> is optional. I is returned in the result (see 
+     * ServiceCallResult#objectKeysMapping) and let the caller bind the job ID with the input blob.
+     * If not passed, a random UUID is generated.
+     * <br>
+     * For the values to pass in <code>actions</code>, <code>classes</code> and <code>similarmetadata</code>, see
+     * the service documentation at
+     * {@link https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment/ContextEnrichmentAPI}
+     * 
+     * @param file
+     * @param sourceId
+     * @param mimeType. If null or "", it will be calculated (can take time)
+     * @param actions
+     * @param classes
+     * @param similarMetadataJsonArrayStr
+     * @param extraJsonPayloadStr
+     * @return
+     * @throws IOException
+     * @since TODO
+     */
+    public ServiceCallResult sendForEnrichment(File file, String sourceId, String mimeType, List<String> actions,
+            List<String> classes, String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException;
+
+    /**
+     * Send a list of blobs for enrichment. In the response, and if succesful, there will be the job ID to use with
+     * getJobIdResult()
+     * 
+     * @param contentObjects
+     * @param actions
+     * @param classes
+     * @param similarMetadataJsonArrayStr
+     * @param extraJsonPayloadStr
+     * @return
+     * @throws IOException
+     * @since TODO
+     */
+    public ServiceCallResult sendForEnrichment(List<ContentToProcess> contentObjects, List<String> actions,
+            List<String> classes, String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException;
+
+    /**
+     * After calling one of the sendForEnrichment() method, pull the results with getJobIdResult().
+     * The HTTP response mayb not be 200. it could be for example 202, "accepted"
+     * 
+     * @param jobId
+     * @return
+     * @throws IOException
+     * @since TODO
+     */
+    public ServiceCallResult getJobIdResult(String jobId) throws IOException;
 
     /**
      * High level call performing all the different serial requests to the service (authenticate, then ask for presigned

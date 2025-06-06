@@ -19,6 +19,7 @@
 package org.nuxeo.labs.hyland.knowledge.enrichment.test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -95,7 +96,7 @@ public class TestHylandKEService {
 
         assertNotNull(result);
 
-        assertTrue(result.callWasSuccesful());
+        assertTrue(result.callResponseOK());
 
         JSONArray actions = result.getResponseAsJSONArray();
         assertNotNull(actions);
@@ -111,7 +112,7 @@ public class TestHylandKEService {
                 "/api/files/upload/presigned-url?contentType=" + TEST_IMAGE_MIMETYPE.replace("/", "%2F"), null);
         assertNotNull(result);
 
-        assertTrue(result.callWasSuccesful());
+        assertTrue(result.callResponseOK());
 
         JSONObject responseJson = result.getResponseAsJSONObject();
         assertNotNull(result);
@@ -125,6 +126,54 @@ public class TestHylandKEService {
     }
 
     @Test
+    public void shouldSendThenGetResults() throws Exception {
+
+        Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
+
+        // 1. Send file
+        File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
+        ServiceCallResult result = hylandKEService.sendForEnrichment(f, null, TEST_IMAGE_MIMETYPE,
+                List.of("image-description"), null, null, null);
+        assertNotNull(result);
+        
+        assertTrue(result.callResponseOK());
+        
+        JSONObject responseJson = result.getResponseAsJSONObject();
+        String jobId = responseJson.getString("processingId");
+        assertNotNull(jobId);
+
+        //2. Wait a bit (we should try in another thread, but, well)
+        java.lang.Thread.sleep(3000);
+        
+        // 3. Get results
+        // Need to loop until we get an actual result
+        int count  = 0;
+        do {
+            count += 1;
+            System.out.println("COUCOUCOUCOUCOUCOU");
+            result = hylandKEService.getJobIdResult(jobId);
+            if(!result.callResponseOK()) {
+                java.lang.Thread.sleep(3000);
+            }
+        } while(!result.callResponseOK() || count > 5);
+        
+        // Test is valid if response is in the "ok" range
+        assertFalse(result.callFailed());
+        if(result.callResponseOK()) {
+            responseJson = result.getResponseAsJSONObject();
+            JSONArray results = responseJson.getJSONArray("results");
+            JSONObject theResult = results.getJSONObject(0);
+            JSONObject descriptionJson = theResult.getJSONObject("imageDescription");
+            assertTrue(descriptionJson.getBoolean("isSuccess"));
+
+            String description = descriptionJson.getString("result");
+            // We should have at least "Mickey"
+            assertTrue(description.toLowerCase().indexOf("mickey") > -1);
+        }
+        
+    }
+
+    @Test
     public void shouldGetImageDescription() throws Exception {
         Assume.assumeTrue(ConfigCheckerFeature.hasEnrichmentClientInfo());
 
@@ -133,33 +182,8 @@ public class TestHylandKEService {
                 null, null);
         assertNotNull(result);
 
-        /*
-         * The response is an object built by HylandCIServiceImpl, embedding the response from CIC and the result of the
-         * HTTP
-         * call
-         * {
-         * "response": the service response. Something like
-         * {
-         * "id": "...",
-         * "timestamp": "...",
-         * "status": "SUCCESS",
-         * "results: [
-         * {
-         * "objectKey": "...",
-         * "imageDescription": {...},
-         * "metadata": ...,
-         * "textSummary": ...,
-         * ...etc...
-         * }
-         * ]
-         * }
-         * "responseCode": the HTTP status,
-         * "responseMessage": the response message
-         * }
-         */
-
         // Expecting HTTP OK
-        assertTrue(result.callWasSuccesful());
+        assertTrue(result.callResponseOK());
 
         JSONObject responseJson = result.getResponseAsJSONObject();
         assertNotNull(responseJson);
@@ -187,7 +211,7 @@ public class TestHylandKEService {
         assertNotNull(result);
 
         // Expecting HTTP OK
-        assertTrue(result.callWasSuccesful());
+        assertTrue(result.callResponseOK());
 
         JSONObject responseJson = result.getResponseAsJSONObject();
         String status = responseJson.getString("status");
@@ -213,7 +237,7 @@ public class TestHylandKEService {
         assertNotNull(result);
 
         // Expecting HTTP OK
-        assertTrue(result.callWasSuccesful());
+        assertTrue(result.callResponseOK());
 
         JSONObject responseJson = result.getResponseAsJSONObject();
         String status = responseJson.getString("status");
@@ -242,7 +266,7 @@ public class TestHylandKEService {
         assertNotNull(result);
 
         // Expecting HTTP OK
-        assertTrue(result.callWasSuccesful());
+        assertTrue(result.callResponseOK());
 
         JSONObject responseJson = result.getResponseAsJSONObject();
         String status = responseJson.getString("status");
@@ -306,7 +330,7 @@ public class TestHylandKEService {
         assertNotNull(result);
 
         // Expecting HTTP OK
-        assertTrue(result.callWasSuccesful());
+        assertTrue(result.callResponseOK());
 
         JSONObject responseJson = result.getResponseAsJSONObject();
         String status = responseJson.getString("status");
@@ -366,7 +390,7 @@ public class TestHylandKEService {
         assertNotNull(result);
 
         // Expecting HTTP OK
-        assertTrue(result.callWasSuccesful());
+        assertTrue(result.callResponseOK());
 
         JSONArray mapping = result.getObjectKeysMapping();
         assertNotNull(mapping);
@@ -427,20 +451,20 @@ public class TestHylandKEService {
         // org.apache.commons.io.FileUtils.writeStringToFile(file, result, "UTF-8");
 
         // Expecting HTTP OK
-        assertTrue(result.callWasSuccesful());
+        assertTrue(result.callResponseOK());
 
         JSONObject responseJson = result.getResponseAsJSONObject();
         assertNotNull(responseJson);
     }
-    
+
     protected JSONObject getTextSummaryObject(ServiceCallResult result) {
-        
+
         JSONObject responseJson = result.getResponseAsJSONObject();
-        
+
         JSONArray results = responseJson.getJSONArray("results");
         JSONObject theResult = results.getJSONObject(0);
         JSONObject summaryObj = theResult.getJSONObject("textSummary");
-        
+
         return summaryObj;
     }
 
@@ -454,18 +478,18 @@ public class TestHylandKEService {
         ServiceCallResult result = hylandKEService.enrich(f, TEST_CONTRACT_MIMETYPE, List.of("text-summarization"),
                 null, null, null);
         assertNotNull(result);
-        
+
         // Expecting HTTP OK
-        assertTrue(result.callWasSuccesful());
-        
+        assertTrue(result.callResponseOK());
+
         JSONObject summaryObj = getTextSummaryObject(result);
         assertTrue(summaryObj.getBoolean("isSuccess"));
-        
+
         String summary = summaryObj.getString("result");
-        assertTrue(StringUtils.isNotBlank(summary));        
+        assertTrue(StringUtils.isNotBlank(summary));
 
     }
-    
+
     @Test
     public void shouldUseMaxWordCount() throws Exception {
 
@@ -476,23 +500,20 @@ public class TestHylandKEService {
         ServiceCallResult result = hylandKEService.enrich(f, TEST_CONTRACT_MIMETYPE, List.of("text-summarization"),
                 null, null, null);
         assertNotNull(result);
-        
-        // Here we skip result.callWasSuccesful() etc.
-        
+
+        // Here we skip result.callResponseOK() etc.
+
         JSONObject summaryObj = getTextSummaryObject(result);
         String summary1 = summaryObj.getString("result");
-        
+
         // Now, same call, few words
-        result = hylandKEService.enrich(f, TEST_CONTRACT_MIMETYPE, List.of("text-summarization"),
-                null, null, "{\"maxWordCount\": 50}");
+        result = hylandKEService.enrich(f, TEST_CONTRACT_MIMETYPE, List.of("text-summarization"), null, null,
+                "{\"maxWordCount\": 50}");
         assertNotNull(result);
-        
+
         summaryObj = getTextSummaryObject(result);
         String summary2 = summaryObj.getString("result");
-        
-        int z = summary1.length();
-        int r = summary2.length();
-        
+
         assertTrue(summary1.length() > summary2.length());
 
     }

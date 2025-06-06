@@ -45,7 +45,6 @@ import org.json.JSONObject;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CloseableFile;
 import org.nuxeo.ecm.core.api.NuxeoException;
-import org.nuxeo.ecm.platform.mimetype.interfaces.MimetypeRegistry;
 import org.nuxeo.labs.knowledge.enrichment.http.ServiceCall;
 import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
 import org.nuxeo.runtime.api.Framework;
@@ -107,6 +106,8 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
     protected static int pullResultsMaxTries;
 
     protected static int pullResultsSleepIntervalMS;
+    
+    public static final String CUSTOM_ID_PREFIX = "CUSTOM_ID-";
 
     protected static ServiceCall serviceCall = new ServiceCall();
 
@@ -158,6 +159,12 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
     public int getPullResultsSleepIntervalMS() {
         return pullResultsSleepIntervalMS;
     }
+    
+    protected String getCustomUUID() {
+        String uuid = UUID.randomUUID().toString();
+        return CUSTOM_ID_PREFIX + uuid.substring(CUSTOM_ID_PREFIX.length());
+    }
+    
 
     protected void initialize() {
 
@@ -323,20 +330,59 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         return null;
     }
 
-    //@Override
+    @Override
     public ServiceCallResult getJobIdResult(String jobId) {
-        
+
         ServiceCallResult result = null;
-        
+
         result = invokeEnrichment("GET", "/api/content/process/" + jobId + "/results", null);
-        
+
         return result;
     }
-    
+
     @Override
-    @SuppressWarnings("rawtypes")
-    public ServiceCallResult enrich(List<ContentToProcess> contentObjects, List<String> actions, List<String> classes,
+    public ServiceCallResult sendForEnrichment(Blob blob, String sourceId, List<String> actions, List<String> classes,
             String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
+        
+        if(StringUtils.isBlank(sourceId)) {
+            sourceId = getCustomUUID();
+        }
+
+        @SuppressWarnings("rawtypes")
+        List<ContentToProcess> contentToProcess = new ArrayList<ContentToProcess>();
+        ContentToProcess<Blob> oneContent = new ContentToProcess<Blob>(sourceId, blob);
+        contentToProcess.add(oneContent);
+
+        ServiceCallResult result = sendForEnrichment(contentToProcess, actions, classes, similarMetadataJsonArrayStr,
+                extraJsonPayloadStr);
+
+        return result;
+
+    }
+
+    @Override
+    public ServiceCallResult sendForEnrichment(File file, String sourceId, String mimeType, List<String> actions, List<String> classes,
+            String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
+        
+        if(StringUtils.isBlank(sourceId)) {
+            sourceId = getCustomUUID();
+        }
+
+        @SuppressWarnings("rawtypes")
+        List<ContentToProcess> contentToProcess = new ArrayList<ContentToProcess>();
+        ContentToProcess<File> oneContent = new ContentToProcess<File>(sourceId, file);
+        contentToProcess.add(oneContent);
+
+        ServiceCallResult result = sendForEnrichment(contentToProcess, actions, classes, similarMetadataJsonArrayStr,
+                extraJsonPayloadStr);
+
+        return result;
+    }
+
+    @SuppressWarnings("rawtypes")
+    @Override
+    public ServiceCallResult sendForEnrichment(List<ContentToProcess> contentObjects, List<String> actions,
+            List<String> classes, String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
 
         ServiceCallResult result = null;
         JSONObject serviceResponse;
@@ -377,7 +423,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
                 content.setProcessingSuccess(false);
                 continue;
             }
-            
+
             content.setProcessingSuccess(true);
 
         }
@@ -390,16 +436,29 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
                                                 .filter(ContentToProcess::isProcessingSuccess)
                                                 .map(ContentToProcess::getObjectKey)
                                                 .collect(Collectors.toList());
-        
-        JSONObject payload = buildProcessActionPayload(objectKeys, actions, classes, similarMetadataJsonArrayStr, extraJsonPayloadStr);
+
+        JSONObject payload = buildProcessActionPayload(objectKeys, actions, classes, similarMetadataJsonArrayStr,
+                extraJsonPayloadStr);
         result = invokeEnrichment("POST", "/api/content/process", payload.toString());
+
+        return result;
+    }
+
+    @Override
+    @SuppressWarnings("rawtypes")
+    public ServiceCallResult enrich(List<ContentToProcess> contentObjects, List<String> actions, List<String> classes,
+            String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
+
+        ServiceCallResult result = null;
+        JSONObject serviceResponse;
+
+        result = sendForEnrichment(contentObjects, actions, classes, similarMetadataJsonArrayStr, extraJsonPayloadStr);
         if (result.callFailed()) {
             return result;
         }
         serviceResponse = result.getResponseAsJSONObject();
         String resultId = serviceResponse.getString("processingId");
 
-        // 6. Get results (loop to check when done)
         result = pullEnrichmentResults(resultId);
 
         // Add the info so that caller can map objectKey and their blob/file
@@ -408,12 +467,12 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
             JSONArray results = response.getJSONArray("results");
             JSONArray mapping = new JSONArray();
             results.forEach(oneResult -> {
-                String objectKey = ((JSONObject)oneResult).getString("objectKey");
+                String objectKey = ((JSONObject) oneResult).getString("objectKey");
                 ContentToProcess found = contentObjects.stream()
                                                        .filter(content -> objectKey.equals(content.getObjectKey()))
                                                        .findFirst()
                                                        .orElse(null);
-                if(found != null) {
+                if (found != null) {
                     JSONObject obj = new JSONObject();
                     obj.put("sourceId", found.getSourceId());
                     obj.put("objectKey", objectKey);
@@ -431,15 +490,16 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
     public ServiceCallResult enrich(Blob blob, List<String> actions, List<String> classes,
             String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
         
-        String uuid = "ABC";// Sending a sngle blob => no need for UUID and all
+        String sourceId = getCustomUUID();
 
         @SuppressWarnings("rawtypes")
         List<ContentToProcess> contentToProcess = new ArrayList<ContentToProcess>();
-        ContentToProcess<Blob> oneContent = new ContentToProcess<Blob>(uuid, blob);
+        ContentToProcess<Blob> oneContent = new ContentToProcess<Blob>(sourceId, blob);
         contentToProcess.add(oneContent);
-        
-        ServiceCallResult result = enrich(contentToProcess, actions, classes, similarMetadataJsonArrayStr, extraJsonPayloadStr);
-        
+
+        ServiceCallResult result = enrich(contentToProcess, actions, classes, similarMetadataJsonArrayStr,
+                extraJsonPayloadStr);
+
         return result;
     }
 
@@ -459,8 +519,8 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         } else {
             payload.put("classes", new JSONArray(classes));
         }
-        
-        if(StringUtils.isNoneBlank(extraJsonPayloadStr)) {
+
+        if (StringUtils.isNoneBlank(extraJsonPayloadStr)) {
             JSONObject extraJsonPayload = new JSONObject(extraJsonPayloadStr);
             for (String key : JSONObject.getNames(extraJsonPayload)) {
                 payload.put(key, extraJsonPayload.get(key));
@@ -474,15 +534,16 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
     public ServiceCallResult enrich(File file, String mimeType, List<String> actions, List<String> classes,
             String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
         
-        String uuid = "ABC";// Sending a sngle blob => no need for UUID and all
+        String sourceId = getCustomUUID();
 
         @SuppressWarnings("rawtypes")
         List<ContentToProcess> contentToProcess = new ArrayList<ContentToProcess>();
-        ContentToProcess<File> oneContent = new ContentToProcess<File>(uuid, file);
+        ContentToProcess<File> oneContent = new ContentToProcess<File>(sourceId, file);
         contentToProcess.add(oneContent);
-        
-        ServiceCallResult result = enrich(contentToProcess, actions, classes, similarMetadataJsonArrayStr, extraJsonPayloadStr);
-        
+
+        ServiceCallResult result = enrich(contentToProcess, actions, classes, similarMetadataJsonArrayStr,
+                extraJsonPayloadStr);
+
         return result;
     }
 
