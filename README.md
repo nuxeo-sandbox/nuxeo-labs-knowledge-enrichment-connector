@@ -19,7 +19,7 @@ It provides two kinds of operations handling the calls to the service (see detai
 >
 
 > [!TIP]
-> Examples of Nuxeo JavaScript Automation using the misc. operations describeb below can be found in the [JS Automation Examples.md](JS Automation Examples.md) file.
+> Examples of Nuxeo JavaScript Automation using the misc. operations describeb below can be found in the [JS Automation Examples](/README-JS-Automation-Examples.md) file.
 
 ## Usage
 
@@ -146,7 +146,7 @@ The operation calls the service and returns a JSON Blob, that contains the objec
 > Reminder: To get the JSON string from this blob, you must call its `getString()` method (see examples below). Then you can `JSON.parse` this string
 
 > [!TIP]
-> For examples of JS Automation: See JS Automation Examples.md
+> For examples of JS Automation: See /README-JS-Automation-Examples.md
 
 
 ### `HylandKnowledgeEnrichment.EnrichSeveral`
@@ -179,7 +179,7 @@ This way, when looping the results, for each result you can:
 3. Act accordingly (typically, get a the corresponding document, store values in fields)
 
 > [!TIP]
-> For example(s) of JS Automation: See JS Automation Examples.md
+> For example(s) of JS Automation: See [JS Automation Examples](/README-JS-Automation-Examples.md).
 
 
 ### `HylandKnowledgeEnrichment.Invoke`
@@ -279,7 +279,7 @@ The operation calls the service and returns a JSON Blob, that contains the objec
 > Reminder: To get the JSON string from this blob, you must call its `getString()` method (see examples below). Then you can `JSON.parse` this string
 
 > [!TIP]
-> For example(s) of JS Automation: See JS Automation Examples.md
+> For example(s) of JS Automation: See [JS Automation Examples](/README-JS-Automation-Examples.md).
 
 ### `HylandKnowledgeEnrichment.Configure`
 
