@@ -150,26 +150,23 @@ public class TestHylandKEService {
         int count  = 0;
         do {
             count += 1;
-            System.out.println("COUCOUCOUCOUCOUCOU");
             result = hylandKEService.getJobIdResult(jobId);
             if(!result.callResponseOK()) {
                 java.lang.Thread.sleep(3000);
             }
         } while(!result.callResponseOK() || count > 5);
         
-        // Test is valid if response is in the "ok" range
-        assertFalse(result.callFailed());
-        if(result.callResponseOK()) {
-            responseJson = result.getResponseAsJSONObject();
-            JSONArray results = responseJson.getJSONArray("results");
-            JSONObject theResult = results.getJSONObject(0);
-            JSONObject descriptionJson = theResult.getJSONObject("imageDescription");
-            assertTrue(descriptionJson.getBoolean("isSuccess"));
+        assertTrue(result.callResponseOK());
+        
+        responseJson = result.getResponseAsJSONObject();
+        JSONArray results = responseJson.getJSONArray("results");
+        JSONObject theResult = results.getJSONObject(0);
+        JSONObject descriptionJson = theResult.getJSONObject("imageDescription");
+        assertTrue(descriptionJson.getBoolean("isSuccess"));
 
-            String description = descriptionJson.getString("result");
-            // We should have at least "Mickey"
-            assertTrue(description.toLowerCase().indexOf("mickey") > -1);
-        }
+        String description = descriptionJson.getString("result");
+        // We should have at least "Mickey"
+        assertTrue(description.toLowerCase().indexOf("mickey") > -1);
         
     }
 
