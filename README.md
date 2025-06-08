@@ -18,6 +18,9 @@ It provides two kinds of operations handling the calls to the service (see detai
 > ```
 >
 
+> [!TIP]
+> Examples of Nuxeo JavaScript Automation using the misc. operations describeb below can be found in the [JS Automation Examples.md](JS Automation Examples.md) file.
+
 ## Usage
 
 1. Have a valid application on Content Intelligence Cloud/Content Innovation Cloud. Also look at its documentation. You need valid endpoints (authentication, content intelligence, data curation), and valid clientId and clientSecret.
@@ -142,211 +145,8 @@ The operation calls the service and returns a JSON Blob, that contains the objec
 > [!NOTE]
 > Reminder: To get the JSON string from this blob, you must call its `getString()` method (see examples below). Then you can `JSON.parse` this string
 
-#### Example: Get an image Description, store in `dc:description`
-
-In the example, we check the input document behaves as a `Picture`, and we send its jpeg rendition (we don't want to send the main file, which could be a 300MB Photoshop file)
-
-```javascript
-// input: document, output: document
-function run(input, params) {
-  
-  var jpeg, result, resultJson, response, serviceResult,
-      descriptionObj, description;
-  
-  if(!input.hasFacet("Picture")) {
-    Console.warn("Input doc should have the Picture facet");
-    return input;
-  }
-    
-  // Get the jpeg rendition
-  jpeg = Picture.GetView(input, {'viewName': 'FullHD'});
-  if(!jpeg) {
-    // We've got a problem.
-    Console.error("No jpeg rendition found for the input document.");
-    return input;
-  }
-  
-  // Call the service
-  result = HylandKnowledgeEnrichment.Enrich(
-    jpeg, {
-      'actions': "image-description",
-      // "classes": not used here. Could be passed "" or null,
-      // "similarMetadata": not used here Could be passed "" or null
-    }
-  );
-  
-  // Do not forget to use the getString() method :-)
-  resultJson = JSON.parse(result.getString());
-  
-  if(resultJson.responseCode !== 200) {
-    Console.error("Error calling the service:\n " + JSON.stringify(resultJson, null, 2));
-  } else {
-    response = resultJson.response;
-    
-    // For the JSON returned by CIC/KE, please see the documentation/schemas/tech info
-    // at https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment
-    // Also, just log the result and look at what was returned. For example:
-    // Console.log("RESULT\n" + JSON.stringify(resultJson, null, 2));
-    
-    if(response.status !== "SUCCESS") {
-      // (we could handle PARTIAL FAILURE. It means for example getting
-      // a description worked, getting the embeddings failed)
-      Console.error("Error calling the service:\n " + JSON.stringify(resultJson, null, 2));
-    } else {
-      serviceResult = response.results[0]; // Only one since we sent only one file
-      
-      // Get the description.
-      // As status is SUCCESS, no need to check descriptionObj.isSuccess 
-      descriptionObj = serviceResult.imageDescription;
-      // Save in dc:description
-      input["dc:description"] = descriptionObj.result;
-      
-      input = Document.Save(input, {});
-    }
-  }
-  
-  return input;
-  
-}
-```
-
-#### Example: Get an image Description + image Embeddings, store in `dc:description` and in a custom `embeddings:image` field
-
-```javascript
-function run(input, params) {
-  
-  var jpeg, result, resultJson, response, serviceResult,
-      descriptionObj, description, embeddingsObj, embeddings;
-  
-  if(!input.hasFacet("Picture")) {
-    Console.warn("Input doc should have the Picture facet");
-    return input;
-  }
-  
-  // Get the jpeg rendition
-  jpeg = Picture.GetView(input, {'viewName': 'FullHD'});
-  if(!jpeg) {
-    // We've got a problem.
-    Console.error("No jpeg rendition found for the input document.");
-    return input;
-  }
-  
-  // Call the service
-  result = HylandKnowledgeEnrichment.Enrich(
-    jpeg, {
-      'actions': "image-description,image-embeddings",
-      // "classes": not used here. Could be passed "" or null,
-      // "similarMetadata": not used here Could be passed "" or null
-    }
-  );
-  
-  // Do not forget to use the getString() method :-)
-  resultJson = JSON.parse(result.getString());
-  
-  if(resultJson.responseCode !== 200) {
-    Console.error("Error calling the service:\n " + JSON.stringify(resultJson, null, 2));
-  } else {
-    response = resultJson.response;
-    
-    // For the JSON returned by CIC/KE, please see the documentation/schemas/tech info
-    // at https://hyland.github.io/ContentIntelligence-Docs/KnowledgeEnrichment
-    // Also, just log the result and look at what was returned. For example:
-    // Console.log("RESULT\n" + JSON.stringify(resultJson, null, 2));
-    
-    if(response.status !== "SUCCESS") {
-      // (we could handle PARTIAL FAILURE. It means for example getting
-      // a description worked, getting the embeddings failed)
-      Console.error("Error calling the service:\n " + JSON.stringify(resultJson, null, 2));
-    } else {
-      serviceResult = response.results[0]; // Only one since we sent only one file
-      
-      // Get the description.
-      // As status is SUCCESS, no need to check descriptionObj.isSuccess 
-      descriptionObj = serviceResult.imageDescription;
-      // Save in dc:description
-      input["dc:description"] = descriptionObj.result;
-      
-      // Get the embeddings
-      embeddingsObj = serviceResult.imageEmbeddings;
-      embeddings = embeddingsObj.result;
-      // Save in custom fields embeddings:image
-      // In this example, we have the custom schema, embeddings,
-      // and the custom Facet, Embeddings, that references the schema.
-      if(!input.hasFacet("Embeddings")) {
-        input = Document.AddFacet(
-          input, {
-            'facet': "Embeddings",
-            'save': false 
-          });
-      }
-      input["embeddings:image"] = embeddingsObj.result;
-      
-      input = Document.Save(input, {});
-    }
-  }
-  
-  return input;
-  
-}
-```
-
-#### Example: Classification of a text file
-
-("Text file" here means it's a pdf, typically. See available doc type in KE documentation)
-
-```javascript
-function run(input, params) {
-  
-  var blob, result, resultJson, response, serviceResult,
-      classificationObj, classification;
-    
-  blob = input["file:content"];
-  if(!blob) {
-    // We've got a problem.
-    Console.error("No blob in the input document.");
-    return input;
-  }
-
-  // Call the service
-  // With "text-classification", we must pass at least 2 values in "classes"
-  result = HylandKnowledgeEnrichment.Enrich(
-    blob, {
-      'actions': "text-classification",
-      "classes": "Contract, Invoice, Report, Policy, Resume"
-      // "similarMetadata": not used here Could be passed "" or null
-    }
-  );
-  
-  // Do not forget to use the getString() method :-)
-  resultJson = JSON.parse(result.getString());
-  
-  Console.log("Calling the service, response code: " + resultJson.responseCode);
-  if(resultJson.responseCode !== 200) {
-    Console.error("Error calling the service:\n " + JSON.stringify(resultJson, null, 2));
-  } else {
-    response = resultJson.response;
-    if(response.status !== "SUCCESS") {
-      // (we could handle PARTIAL FAILURE. It means for example getting
-      // a description worked, getitng the embeddings failed)
-      Console.error("Error calling the service:\n " + JSON.stringify(resultJson, null, 2));
-    } else {
-      serviceResult = response.results[0]; // Only one since we sent only one file
-      
-      // Get the classification.
-      // As status is SUCCESS, no need to check descriptionObj.isSuccess 
-        classificationObj = serviceResult.textClassification;
-      // Save in dc:description for the test
-      classification = classificationObj.result;
-      input["dc:description"] = "Classification returned: " + classification;
-      
-      input = Document.Save(input, {});
-    }
-  }
-  
-  return input;
-  
-}
-```
+> [!TIP]
+> For examples of JS Automation: See JS Automation Examples.md
 
 
 ### `HylandKnowledgeEnrichment.EnrichSeveral`
@@ -378,106 +178,8 @@ This way, when looping the results, for each result you can:
 2. Find this value in the `objectKeysMapping`
 3. Act accordingly (typically, get a the corresponding document, store values in fields)
 
-#### Example with Documents
-
-Say we have a list of Picture, for example, after a query. We want the image-description for each of them, calling in a batch.
-
-```javascript
-function run(input, params) {
-  
-  var docs, resultDocs, oneDoc, blobs, jpeg, blob, i, sourceIds,
-      result, resultJson, results,
-      objectKeysMapping, response, objKey, sourceId;
-  
-  // ... docs is a list of Picture filled previously...
-  // Fill sourceIds and blobs
-  // We will send the jpeg rendition for each
-  sourceIds = [];
-  blobs = [];
-  for(i = 0; i < docs.size(); i++) {
-    oneDoc = docs[i];
-    sourceIds.push(oneDoc.id);
-    
-    jpeg = Picture.GetView(input, {'viewName': 'FullHD'});
-    blobs.push(jpeg);
-    
-  }
-  
-  // Initialize result
-  resultDocs = [];
-  
-  // Call operation
-  result = HylandKnowledgeEnrichment.EnrichSeveral(
-    blobs, {
-      'actions': "image-description",
-      // "classes": not used here. Could be passed "" or null,
-      // "similarMetadataJsonArrayStr": not used here Could be passed "" or null
-      'sourceIds': sourceIds.join(),
-      //'xpath': 
-    });
-
-  // Do not forget to use the getString() method :-)
-  resultJson = JSON.parse(result.getString());
-  
-  Console.log("Calling the service, response code: " + resultJson.responseCode);
-  if(resultJson.responseCode !== 200) {
-    Console.error("Error calling the service:\n " + JSON.stringify(resultJson, null, 2));
-  } else {
-    // Get the array of mappings
-    objectKeysMapping = resultJson.objectKeysMapping;
-    
-    // Get the array of results
-    response = resultJson.response;
-    if(response.status !== "SUCCESS") {
-      // (we could handle PARTIAL FAILURE. It means for example getting
-      // a description worked, getitng the embeddings failed)
-      Console.error("Error calling the service:\n " + JSON.stringify(resultJson, null, 2));
-    } else {
-      // Loop the results
-      resultJson.results.forEach(function(oneResult) {
-        // description.
-        descriptionObj = oneResult.imageDescription;
-        // ... if handling PARTIAL_FAILURE, you shoudl check descriptionObj.isSuccess...
-        
-        // Get the key
-        objKey = oneResult.objectKey;
-        // deduce the source doc ID
-        sourceId = getSourceIdByObjectKey(objectKeysMapping, objKey);
-        if(!sourceId) {
-          Console.warn("sourceId not found for objectKey " + objKey);
-        } else {
-          // Load the Document
-          oneDoc = Repository.GetDocument(null, {'value': sourceid});
-          
-          // Set-up description
-          oneDoc["dc:description"] = descriptionObj.result;
-          
-          // Save
-          oneDoc = Document.Save(oneDoc, {});
-          resultDocs.push(oneDoc);
-        }
-        
-      });
-    }
-  }
-  
-  return resultDocs;
-
-}
-
-// Can't us ARRAY.find() of ECMAScript6, halas.
-function getSourceIdByObjectKey(objectKeysMapping, targetKey) {
-  for (var i = 0; i < objectKeysMapping.length; i++) {
-    if (objectKeysMapping[i].objectKey === targetKey) {
-      return objectKeysMapping[i].sourceId;
-    }
-  }
-  return null;
-}
-```
-
-
-
+> [!TIP]
+> For example(s) of JS Automation: See JS Automation Examples.md
 
 
 ### `HylandKnowledgeEnrichment.Invoke`
@@ -576,6 +278,8 @@ The operation calls the service and returns a JSON Blob, that contains the objec
 > [!NOTE]
 > Reminder: To get the JSON string from this blob, you must call its `getString()` method (see examples below). Then you can `JSON.parse` this string
 
+> [!TIP]
+> For example(s) of JS Automation: See JS Automation Examples.md
 
 ### `HylandKnowledgeEnrichment.Configure`
 
