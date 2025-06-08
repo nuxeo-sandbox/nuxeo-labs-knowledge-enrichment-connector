@@ -120,6 +120,8 @@ The service returns a token valid a certain time: The plugin handles this timeou
 
 * `HylandKnowledgeEnrichment.Enrich`
 * `HylandKnowledgeEnrichment.EnrichSeveral`
+* `HylandKnowledgeEnrichment.SendForEnrichment`
+* `HylandKnowledgeEnrichment.GetEnrichmentResults`
 * `HylandKnowledgeEnrichment.Invoke`
 * `HylandKnowledgeEnrichment.Curate`
 * `HylandKnowledgeEnrichment.Configure`
@@ -180,6 +182,47 @@ This way, when looping the results, for each result you can:
 
 > [!TIP]
 > For example(s) of JS Automation: See [JS Automation Examples](/README-JS-Automation-Examples.md).
+
+### `HylandKnowledgeEnrichment.SendForEnrichment`
+
+`HylandKnowledgeEnrichment.Enrich` performs all the tasks and calls required to send a file and pull the results. Sometimes, it maybe interesting to split these actions in 2 parts:
+
+1. Send a file and request action(s)
+2. Then pull the result and check status from Nuxeo.
+
+This can be interesting when you need more fine tuning or when you know the processing could lead to a time out from the plugin (not the srevice. See `nuxeo.hyland.cic.pullResultsMaxTries`, `nuxeo.hyland.cic.pullResultsSleepInterval` and the `HylandKnowledgeEnrichment.Configure` operation)
+
+`HylandKnowledgeEnrichment.Enrich` acts as `HylandKnowledgeEnrichment.Enrich`, excepts it:
+* Accepts an extra optional parameter (`sourceId`)
+* Returns before pulling result. The returned JSON contains a processingId field to be used with call(s) to `HylandKnowledgeEnrichment.GetEnrichmentResults`.
+
+> [!WARNING]
+> See CIC KnowledgeEnricgment documentation: File and results are ephemeral in the service, and destroyed after a delay (o24h at the time this documentaiton is written).
+
+* Input: `blob`
+* Output: `Blob`, a JSON blob
+* Parameters
+  * `sourceId`: String, optional. See explanation of sourceId with `HylandKnowledgeEnrichment.EnrichSeveral`. Typically, if you are building a background process that loops on results to fetch, you will pass the UUID of a document, so you can retrieve it via the use of the `objectKeysMapping` property.
+  * `actions`: String required. A list of comma separated actions to perform. See KE documentation about available actions
+  * `classes`: String, optional.  A list of comma separated classes, to be used with some classification actions (can be ommitted or null for other actions)
+  * `similarMetadata`: String, optional.  A JSON Array (as string) of similar metadata (array of key/value pairs). To be used with the misc. "metadata" actions.
+  * `extraJsonPayloadStr`: String, optional. A JSON object as string, with extra parameters for the service. For example, use "maxWordCount" to increase or decrease the text-summary. This parameter is also useful in case the service adds more tuning in the misc. calls => no need to wait for a plugin update, just change your payload. 
+
+The `response` property of the result JSON (if succesfull) will hhave a `processingId` property, to be saved and used later with `HylandKnowledgeEnrichment.GetEnrichmentResults`
+
+
+### `HylandKnowledgeEnrichment.GetEnrichmentResults`
+
+(See `HylandKnowledgeEnrichment.SendForEnrichment` for details)
+
+After calling `HylandKnowledgeEnrichment.SendForEnrichment`, you need to get the results.
+
+* Input: `void``
+* output `Blob`, a JSON blob
+* Parameters
+  * `jobId`: String, required. The value returned in the JSON after a call to `HylandKnowledgeEnrichment.SendForEnrichment`
+
+The operation gets the results for the job ID. Notice you have to wait for an HTTP response of OK with the status "Done". before this, you may get dirrerent steps ("acceoted", "processing", ...)
 
 
 ### `HylandKnowledgeEnrichment.Invoke`

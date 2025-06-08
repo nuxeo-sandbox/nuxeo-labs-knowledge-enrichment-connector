@@ -44,7 +44,7 @@ public class HylandKEGetEnrichmentResultsOp {
     protected HylandKEService ciService;
 
     @OperationMethod
-    public Blob run(Blob blob) {
+    public Blob run() {
 
         ServiceCallResult result;
         try {
