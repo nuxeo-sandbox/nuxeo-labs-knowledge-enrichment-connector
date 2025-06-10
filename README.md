@@ -240,6 +240,20 @@ A low level operation, for which you must provide the correct endpoints, correct
 
 The operation calls the Enrichment service (after handling authentication) and returns the result. See above for the structure of returned JSON.
 
+To uplao a fgile to the service, you will first get a presigned URL then use the `HylandKnowledgeEnrichment.UploadFile` operation.
+
+### `HylandKnowledgeEnrichment.UploadFile``
+
+A low level operation to be used after a succesful call to `HylandKnowledgeEnrichment.Invoke`, using the endpoint returning a presigned URL.
+
+* Input: `blob`
+* Output: `blob`, a JSON blob
+* Parameters
+  * presignedUrl: `string`, required. The presigned URL where to send the file. You previousely used `HylandKnowledgeEnrichment.Invoke` with the correct HTTP method, endpoint, etc.
+  * mimeType: `string`, optionnal. If not passed, we get it from the blob
+
+Return the usual JSON result, but `response` is always an empty object. You must check the `responseCode`, that must be 200.
+
 
 ### `HylandKnowledgeEnrichment.Curate`
 
