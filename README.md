@@ -202,7 +202,9 @@ This can be interesting when you need more fine tuning or when you know the proc
 * Input: `blob`
 * Output: `Blob`, a JSON blob
 * Parameters
-  * `sourceId`: String, optional. See explanation of sourceId with `HylandKnowledgeEnrichment.EnrichSeveral`. Typically, if you are building a background process that loops on results to fetch, you will pass the UUID of a document, so you can retrieve it via the use of the `objectKeysMapping` property.
+  * `sourceId`: String, optional. See explanation of sourceId with `HylandKnowledgeEnrichment.EnrichSeveral`.
+    * Typically, if you are building a background process that loops on results to fetch, you will pass the UUID of a document, so you can retrieve it via the use of the `objectKeysMapping` property.
+    * If this parameter is empty, a cusotm UUID will be created by the plugin. It starts with `CUSTOM_ID-`, so you can make the difference between this UUID and the UUID of a document.
   * `actions`: String required. A list of comma separated actions to perform. See KE documentation about available actions
   * `classes`: String, optional.  A list of comma separated classes, to be used with some classification actions (can be ommitted or null for other actions)
   * `similarMetadata`: String, optional.  A JSON Array (as string) of similar metadata (array of key/value pairs). To be used with the misc. "metadata" actions.
