@@ -19,8 +19,6 @@
 package org.nuxeo.labs.hyland.knowledge.enrichment.automation;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 import org.nuxeo.ecm.automation.core.annotations.Context;
