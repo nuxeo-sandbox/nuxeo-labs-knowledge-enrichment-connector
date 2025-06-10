@@ -3,6 +3,7 @@
 
     <extension point="operations" target="org.nuxeo.ecm.core.operation.OperationServiceComponent">
         <operation class="org.nuxeo.labs.hyland.knowledge.enrichment.automation.HylandKEInvokeOp"/>
+        <operation class="org.nuxeo.labs.hyland.knowledge.enrichment.automation.HylandKEUploadFileOp"/>
         <operation class="org.nuxeo.labs.hyland.knowledge.enrichment.automation.HylandKEEnrichOp"/>
         <operation class="org.nuxeo.labs.hyland.knowledge.enrichment.automation.HylandKECurateOp"/>
         <operation class="org.nuxeo.labs.hyland.knowledge.enrichment.automation.ConfigureServiceOp"/>
@@ -13,12 +14,5 @@
         <!-- Not to be used. Kept for a while in case we need it -->
         <operation class="org.nuxeo.labs.hyland.knowledge.enrichment.automation.HylandKEInvokeObsoleteDemoOp"/>
     </extension>
-
-	<!-- We don't deploy this helper anymore, not needed. Kept here as reference/example for a training -->
-	<!--
-    <extension target="org.nuxeo.ecm.core.operation.OperationServiceComponent" point="contextHelpers">
-        <contextHelper id="Base64Helper" class="org.nuxeo.labs.hyland.knowledge.enrichment.automation.function.Base64Function"/>
-    </extension>
-    -->
 
 </component>
