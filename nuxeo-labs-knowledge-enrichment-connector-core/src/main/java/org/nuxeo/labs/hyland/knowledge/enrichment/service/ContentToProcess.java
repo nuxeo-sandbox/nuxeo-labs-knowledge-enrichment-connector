@@ -18,10 +18,13 @@
  */
 package org.nuxeo.labs.hyland.knowledge.enrichment.service;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CloseableFile;
 import org.nuxeo.ecm.core.api.NuxeoException;
@@ -29,9 +32,17 @@ import org.nuxeo.ecm.platform.mimetype.interfaces.MimetypeRegistry;
 import org.nuxeo.runtime.api.Framework;
 
 /**
- * @since TODO
+ * Handle either a Blob or a File.
+ * <br>
+ * When calling getFile(), if the main object is a blob, the class first get a
+ * CloseableFile to make sure there is a file ((File on S3 not yet cached for example)
+ * This why caller must call the close() method once done with the ContentToProcess.
+ * 
+ * @since 2023
  */
-public class ContentToProcess<T> {
+public class ContentToProcess<T> implements Closeable {
+
+    private static final Logger log = LogManager.getLogger(ContentToProcess.class);
 
     protected String sourceId;
 
@@ -44,19 +55,18 @@ public class ContentToProcess<T> {
     protected String mimeType;
 
     protected String objectKey;
-    
+
     protected boolean processingSuccess;
-    
+
     protected String errorMessage;
 
     public ContentToProcess(String sourceId, T content) {
         super();
-        
+
         this.sourceId = sourceId;
 
         if (content instanceof Blob) {
             blob = (Blob) content;
-            setFileFromBlob();
         } else if (content instanceof File) {
             file = (File) content;
         } else {
@@ -66,42 +76,27 @@ public class ContentToProcess<T> {
         updateMimeType();
     }
 
-    protected void setFileFromBlob() {
-
-        file = blob.getFile();
-        if (file == null) {
-            // This is possible (File on S3 not yet cached for example)
-            try {
-                closeableFile = blob.getCloseableFile();
-                file = closeableFile.getFile();
-            } catch (IOException e) {
-                throw new NuxeoException("Failed to get a CloseableFile", e);
-            }
-        }
-    }
-
     protected void updateMimeType() {
 
+        MimetypeRegistry registry = Framework.getService(MimetypeRegistry.class);
         if (blob != null) {
             mimeType = blob.getMimeType();
             if (StringUtils.isBlank(mimeType)) {
-                MimetypeRegistry registry = Framework.getService(MimetypeRegistry.class);
                 mimeType = registry.getMimetypeFromBlob(blob);
             }
         } else {
-            MimetypeRegistry registry = Framework.getService(MimetypeRegistry.class);
             mimeType = registry.getMimetypeFromFile(file);
         }
     }
 
-    public void cleanup() throws IOException {
-
+    public void close() {
         if (closeableFile != null) {
             try {
                 closeableFile.close();
             } catch (IOException e) {
-                // Ignore
+                log.warn("Failed to close the CloseableFile.", e);
             }
+            closeableFile = null;
         }
     }
 
@@ -122,7 +117,23 @@ public class ContentToProcess<T> {
     }
 
     public File getFile() {
-        return file;
+        
+        if(file != null) {
+            return file;
+        }
+
+        File f = blob.getFile();
+        if (f == null) {
+            // This is possible (File on S3 not yet cached for example)
+            try {
+                closeableFile = blob.getCloseableFile();
+                f = closeableFile.getFile();
+            } catch (IOException e) {
+                throw new NuxeoException("Failed to get a CloseableFile", e);
+            }
+        }
+
+        return f;
     }
 
     public String getMimeType() {

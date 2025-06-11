@@ -428,6 +428,11 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
             content.setProcessingSuccess(true);
 
         }
+        
+        // We need to cleanup and close() any potential CloseableFile fetched during the loop
+        for (ContentToProcess content : contentObjects) {
+            content.close();
+        }
 
         // 4. Get available actions
         // (Not needed here)

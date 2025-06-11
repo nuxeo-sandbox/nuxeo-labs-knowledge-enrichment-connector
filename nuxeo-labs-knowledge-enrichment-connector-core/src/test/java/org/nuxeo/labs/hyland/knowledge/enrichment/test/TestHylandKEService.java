@@ -134,29 +134,29 @@ public class TestHylandKEService {
         ServiceCallResult result = hylandKEService.sendForEnrichment(f, null, TEST_IMAGE_MIMETYPE,
                 List.of("image-description"), null, null, null);
         assertNotNull(result);
-        
+
         assertTrue(result.callResponseOK());
-        
+
         JSONObject responseJson = result.getResponseAsJSONObject();
         String jobId = responseJson.getString("processingId");
         assertNotNull(jobId);
 
-        //2. Wait a bit (we should try in another thread, but, well)
+        // 2. Wait a bit (we should try in another thread, but, well)
         java.lang.Thread.sleep(3000);
-        
+
         // 3. Get results
         // Need to loop until we get an actual result
-        int count  = 0;
+        int count = 0;
         do {
             count += 1;
             result = hylandKEService.getJobIdResult(jobId);
-            if(!result.callResponseOK()) {
+            if (!result.callResponseOK()) {
                 java.lang.Thread.sleep(3000);
             }
-        } while(!result.callResponseOK() || count > 5);
-        
+        } while (!result.callResponseOK() || count > 5);
+
         assertTrue(result.callResponseOK());
-        
+
         responseJson = result.getResponseAsJSONObject();
         JSONArray results = responseJson.getJSONArray("results");
         JSONObject theResult = results.getJSONObject(0);
@@ -166,7 +166,7 @@ public class TestHylandKEService {
         String description = descriptionJson.getString("result");
         // We should have at least "Mickey"
         assertTrue(description.toLowerCase().indexOf("mickey") > -1);
-        
+
     }
 
     @Test
@@ -321,15 +321,31 @@ public class TestHylandKEService {
                                """;
 
         File f = FileUtils.getResourceFileFromContext(TEST_IMAGE_PATH);
-        ServiceCallResult result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-metadata-generation"),
-                null, similarMetadata, null);
-        assertNotNull(result);
-
-        // Expecting HTTP OK
-        assertTrue(result.callResponseOK());
-
-        JSONObject responseJson = result.getResponseAsJSONObject();
-        String status = responseJson.getString("status");
+        
+        JSONObject responseJson;
+        String status;
+        int tryCount = 0;
+        // In first beat version of the service, it may fail then work fine (most of the
+        // time it works fine), so let's try it 2-3 times? (except if response is not OK 200)
+        do {
+            
+            ServiceCallResult result = hylandKEService.enrich(f, TEST_IMAGE_MIMETYPE, List.of("image-metadata-generation"),
+                    null, similarMetadata, null);
+            assertNotNull(result);
+    
+            // Expecting HTTP OK
+            assertTrue(result.callResponseOK());
+    
+            responseJson = result.getResponseAsJSONObject();
+            status = responseJson.getString("status");
+            
+            tryCount += 1;
+            if(tryCount > 1) {
+                System.out.println("shouldGetImageMetadata: Servcice returned " + status + "n trying again.");
+            }
+            
+        } while(tryCount < 4 || !"SUCCESS".equals(status));
+        // Fail after the 2-3 attempts
         assertEquals("SUCCESS", status);
 
         JSONArray results = responseJson.getJSONArray("results");
