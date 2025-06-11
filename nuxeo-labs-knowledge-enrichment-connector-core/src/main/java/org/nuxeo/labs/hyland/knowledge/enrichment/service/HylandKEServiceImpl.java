@@ -310,6 +310,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
                 }
             }
         } else {
+            log.error("Error getting an auth token:\n" + result.toJsonString(2));
             switch (service) {
             case ENRICHMENT:
                 enrichmentAuthToken = null;
