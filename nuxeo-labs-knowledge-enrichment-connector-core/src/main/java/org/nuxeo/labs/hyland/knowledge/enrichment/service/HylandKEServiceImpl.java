@@ -412,11 +412,9 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
             String objectKey = serviceResponse.getString("objectKey");
             content.setObjectKey(objectKey);
 
-            // 3. Upload file to this URL
+        // 3. Upload file to this URL
             result = serviceCall.uploadFileWithPut(content.getFile(), presignedUrl, content.getMimeType());
             if (result.callFailed()) {
-                // return result;
-
                 errMsg = "Failed uploading content ID <" + content.getSourceId() + ">, File name <\"\n"
                         + content.getFile().getName() + ">.";
                 log.error(errMsg);

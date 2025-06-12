@@ -36,7 +36,8 @@ import org.nuxeo.runtime.api.Framework;
  * <br>
  * When calling getFile(), if the main object is a blob, the class first get a
  * CloseableFile to make sure there is a file ((File on S3 not yet cached for example)
- * This why caller must call the close() method once done with the ContentToProcess.
+ * <br>
+ * This why <b>caller must call the close() method</b> once done with the ContentToProcess.
  * 
  * @since 2023
  */
@@ -76,6 +77,34 @@ public class ContentToProcess<T> implements Closeable {
         updateMimeType();
     }
 
+    /**
+     * This Constructor aims to speed up getting the mimetype, which can be
+     * sometime costly when it is not already known.
+     * 
+     * @param sourceId
+     * @param content
+     * @param mimeType
+     */
+    public ContentToProcess(String sourceId, T content, String mimeType) {
+        super();
+
+        this.sourceId = sourceId;
+
+        if (content instanceof Blob) {
+            blob = (Blob) content;
+        } else if (content instanceof File) {
+            file = (File) content;
+        } else {
+            throw new IllegalArgumentException("Expecting Blob or File");
+        }
+
+        if (StringUtils.isBlank(mimeType)) {
+            updateMimeType();
+        } else {
+            this.mimeType = mimeType;
+        }
+    }
+
     protected void updateMimeType() {
 
         MimetypeRegistry registry = Framework.getService(MimetypeRegistry.class);
@@ -94,7 +123,12 @@ public class ContentToProcess<T> implements Closeable {
             try {
                 closeableFile.close();
             } catch (IOException e) {
-                log.warn("Failed to close the CloseableFile.", e);
+                String fileName = "";
+                File f = closeableFile.getFile();
+                if (f != null) {
+                    fileName = "<" + f.getName() + ">";
+                }
+                log.error("Failed to close the CloseableFile " + fileName, e);
             }
             closeableFile = null;
         }
@@ -117,8 +151,8 @@ public class ContentToProcess<T> implements Closeable {
     }
 
     public File getFile() {
-        
-        if(file != null) {
+
+        if (file != null) {
             return file;
         }
 
