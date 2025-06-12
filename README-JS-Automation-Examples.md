@@ -163,7 +163,7 @@ function run(input, params) {
 function run(input, params) {
   
   var blob, result, resultJson, response, serviceResult,
-      classificationObj, classification;
+      classificationObj, classification,;
     
   blob = input["file:content"];
   if(!blob) {
@@ -171,6 +171,13 @@ function run(input, params) {
     Console.error("No blob in the input document.");
     return input;
   }
+
+  // As of today (June 2025, the service only accepts PDF => Convert of needed
+  if(blob.getMimeType() !== "application/pdf") {
+    blob = Blob.ToPDF(blob, {});
+  }
+  
+  pdf = Blob.ToPDF(blob, {});
 
   // Call the service
   // With "text-classification", we must pass at least 2 values in "classes"
@@ -214,7 +221,7 @@ function run(input, params) {
 ```
 
 
-## Example(s) Using 
+## Example(s) Using `HylandKnowledgeEnrichment.EnrichSeveral`
 
 ### getting Image Description of several Picture Documents
 

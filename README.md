@@ -16,10 +16,10 @@ It provides two kinds of operations handling the calls to the service (see detai
 > ```
 > nuxeoctl mp-install nuxeo-labs-knowledge-enrichment-connector
 > ```
->
 
 > [!TIP]
 > Examples of Nuxeo JavaScript Automation using the misc. operations describeb below can be found in the [JS Automation Examples](/README-JS-Automation-Examples.md) file.
+
 
 ## Usage
 
@@ -118,6 +118,10 @@ The service returns a token valid a certain time: The plugin handles this timeou
 
 ## Operations
 
+> [!TIP]
+> As of "today" (June 2025), CIC Knowledge Enrichment service accepts only PDF for text-based files (`text-classification`, `text-summarization`, etc.).
+> For text-based files enrichment, do not forget to first convert to PDF (see [JS Automation Examples](/README-JS-Automation-Examples.md))
+
 * `HylandKnowledgeEnrichment.Enrich`
 * `HylandKnowledgeEnrichment.EnrichSeveral`
 * `HylandKnowledgeEnrichment.SendForEnrichment`
@@ -148,7 +152,7 @@ The operation calls the service and returns a JSON Blob, that contains the objec
 > Reminder: To get the JSON string from this blob, you must call its `getString()` method (see examples below). Then you can `JSON.parse` this string
 
 > [!TIP]
-> For examples of JS Automation: See /README-JS-Automation-Examples.md
+> For examples of JS Automation: See [JS Automation Examples](/README-JS-Automation-Examples.md)
 
 
 ### `HylandKnowledgeEnrichment.EnrichSeveral`
