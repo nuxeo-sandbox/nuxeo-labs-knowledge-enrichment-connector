@@ -16,7 +16,7 @@
  * Contributors:
  *     Thibaud Arguillere
  */
-package org.nuxeo.labs.knowledge.enrichment.http;
+package org.nuxeo.labs.hyland.knowledge.enrichment.http;
 
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;

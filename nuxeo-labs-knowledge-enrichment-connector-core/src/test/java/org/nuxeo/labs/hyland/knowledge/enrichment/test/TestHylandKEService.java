@@ -38,7 +38,7 @@ import org.nuxeo.common.utils.FileUtils;
 import org.nuxeo.ecm.platform.test.PlatformFeature;
 import org.nuxeo.labs.hyland.knowledge.enrichment.service.ContentToProcess;
 import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
-import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
+import org.nuxeo.labs.hyland.knowledge.enrichment.http.ServiceCallResult;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;

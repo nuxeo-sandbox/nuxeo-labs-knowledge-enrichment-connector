@@ -28,7 +28,7 @@ import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.Blobs;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.labs.hyland.knowledge.enrichment.service.HylandKEService;
-import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
+import org.nuxeo.labs.hyland.knowledge.enrichment.http.ServiceCallResult;
 
 @Operation(id = HylandKEGetEnrichmentResultsOp.ID, category = "Hyland Knowledge Enrichment", label = "CIC Knowledge Enrichement Get Results", description = ""
         + "Invoke the Hyland Knowledge Enrichment (KE) API to get the processing results. Pass in jobId the value received"

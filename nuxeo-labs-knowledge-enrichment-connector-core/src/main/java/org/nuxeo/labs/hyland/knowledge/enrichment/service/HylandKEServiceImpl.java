@@ -23,12 +23,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,8 +42,8 @@ import org.json.JSONObject;
 import org.nuxeo.ecm.core.api.Blob;
 import org.nuxeo.ecm.core.api.CloseableFile;
 import org.nuxeo.ecm.core.api.NuxeoException;
-import org.nuxeo.labs.knowledge.enrichment.http.ServiceCall;
-import org.nuxeo.labs.knowledge.enrichment.http.ServiceCallResult;
+import org.nuxeo.labs.hyland.knowledge.enrichment.http.ServiceCall;
+import org.nuxeo.labs.hyland.knowledge.enrichment.http.ServiceCallResult;
 import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.model.DefaultComponent;
 
@@ -89,24 +86,22 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
 
     protected static String authEndPoint = null;
 
+    protected static String authFullUrl;
+
     protected static String contextEnrichmentEndPoint = null;
 
     protected static String dataCurationEndPoint = null;
 
     public static final String CONTENT_INTELL_CACHE = "content_intelligence_cache";
 
-    protected static String enrichmentAuthToken = null;
+    protected static AuthenticationToken enrichmentAuthToken;
 
-    protected static Instant enrichmentTokenExpiration = null;
-
-    protected static String dataCurationAuthToken = null;
-
-    protected static Instant dataCurationTokenExpiration = null;
+    protected static AuthenticationToken dataCurationAuthToken;
 
     protected static int pullResultsMaxTries;
 
     protected static int pullResultsSleepIntervalMS;
-    
+
     public static final String CUSTOM_ID_PREFIX = "CUSTOM_ID-";
 
     protected static ServiceCall serviceCall = new ServiceCall();
@@ -159,12 +154,11 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
     public int getPullResultsSleepIntervalMS() {
         return pullResultsSleepIntervalMS;
     }
-    
+
     protected String getCustomUUID() {
         String uuid = UUID.randomUUID().toString();
         return CUSTOM_ID_PREFIX + uuid.substring(CUSTOM_ID_PREFIX.length());
     }
-    
 
     protected void initialize() {
 
@@ -185,7 +179,9 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         if (StringUtils.isBlank(authEndPoint)) {
             log.warn("No CIC Authentication endpoint provided (" + ENDPOINT_AUTH_PARAM
                     + "), calls to the service will fail.");
+            authEndPoint = ""; // avoid null for setting authFullUrl
         }
+        authFullUrl = authEndPoint + "/connect/token";
 
         if (StringUtils.isBlank(contextEnrichmentEndPoint)) {
             log.warn("No CIC Context Enrichment endpoint provided (" + ENDPOINT_CONTEXT_ENRICHMENT_PARAM
@@ -216,6 +212,10 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
             log.warn("No CIC Data Curation ClientSecret provided (" + DATA_CURATION_CLIENT_SECRET_PARAM
                     + "), calls to the service will fail.");
         }
+        
+        // ==========> Prepare for getting auth. tokens
+        enrichmentAuthToken = new AuthenticationToken(authFullUrl, enrichmentClientId, enrichmentClientSecret);
+        dataCurationAuthToken = new AuthenticationToken(authFullUrl, dataCurationClientId, dataCurationClientSecret);
 
         // ==========> Other params
         pullResultsMaxTries = configParamToInt(PULL_RESULTS_MAX_TRIES_PARAM, PULL_RESULTS_MAX_TRIES_DEFAULT);
@@ -238,99 +238,6 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         return value;
     }
 
-    protected String fetchAuthTokenIfNeeded(CICService service) {
-
-        // TODO
-        // Use a synchronize to make sure 2 simultaneous calls stay OK?
-
-        String clientId, clientSecret;
-
-        switch (service) {
-        case ENRICHMENT:
-            if (StringUtils.isNotBlank(enrichmentAuthToken) && !Instant.now().isAfter(enrichmentTokenExpiration)) {
-                return enrichmentAuthToken;
-            }
-            clientId = enrichmentClientId;
-            clientSecret = enrichmentClientSecret;
-            break;
-
-        case DATA_CURATION:
-            if (StringUtils.isNotBlank(dataCurationAuthToken) && !Instant.now().isAfter(dataCurationTokenExpiration)) {
-                return dataCurationAuthToken;
-            }
-            clientId = dataCurationClientId;
-            clientSecret = dataCurationClientSecret;
-            break;
-
-        default:
-            throw new IllegalArgumentException("Unknown service: " + service);
-        }
-        String targetUrl = authEndPoint + "/connect/token";
-
-        Map<String, String> headers = new HashMap<String, String>();
-        headers.put("Accept", "*/*");
-        headers.put("Accept-Encoding", "gzip, deflate, br");
-        // Not JSON...
-        headers.put("Content-Type", "application/x-www-form-urlencoded");
-
-        // Request body
-        String postData;
-        try {
-            postData = "client_id=" + URLEncoder.encode(clientId, "UTF-8") + "&client_secret="
-                    + URLEncoder.encode(clientSecret, "UTF-8") + "&grant_type=client_credentials"
-                    + "&scope=environment_authorization";
-        } catch (UnsupportedEncodingException e) {
-            throw new NuxeoException("Failed to encode the request", e);
-        }
-
-        ServiceCallResult result = serviceCall.post(targetUrl, headers, postData);
-
-        if (result.callWasSuccesful()) {
-            JSONObject serviceResponse = result.getResponseAsJSONObject();
-            // {"error":"invalid_grant","error_description":"Caller not authorized for requested resource"}
-            if (serviceResponse.has("error")) {
-                String msg = "Getting a token failed with error " + serviceResponse.getString("error") + ".";
-                if (serviceResponse.has("error_description")) {
-                    msg += " " + serviceResponse.getString("error_description");
-                }
-                log.error(msg);
-            } else {
-                int expiresIn = serviceResponse.getInt("expires_in");
-                String token = serviceResponse.getString("access_token");
-                switch (service) {
-                case ENRICHMENT:
-                    enrichmentAuthToken = token;
-                    enrichmentTokenExpiration = Instant.now().plusSeconds(expiresIn - 15);
-                    break;
-
-                case DATA_CURATION:
-                    dataCurationAuthToken = token;
-                    dataCurationTokenExpiration = Instant.now().plusSeconds(expiresIn - 15);
-                    break;
-                }
-            }
-        } else {
-            log.error("Error getting an auth token:\n" + result.toJsonString(2));
-            switch (service) {
-            case ENRICHMENT:
-                enrichmentAuthToken = null;
-
-            case DATA_CURATION:
-                dataCurationAuthToken = null;
-            }
-        }
-
-        switch (service) {
-        case ENRICHMENT:
-            return enrichmentAuthToken;
-
-        case DATA_CURATION:
-            return dataCurationAuthToken;
-        }
-
-        return null;
-    }
-
     @Override
     public ServiceCallResult getJobIdResult(String jobId) {
 
@@ -344,8 +251,8 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
     @Override
     public ServiceCallResult sendForEnrichment(Blob blob, String sourceId, List<String> actions, List<String> classes,
             String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
-        
-        if(StringUtils.isBlank(sourceId)) {
+
+        if (StringUtils.isBlank(sourceId)) {
             sourceId = getCustomUUID();
         }
 
@@ -362,10 +269,10 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
     }
 
     @Override
-    public ServiceCallResult sendForEnrichment(File file, String sourceId, String mimeType, List<String> actions, List<String> classes,
-            String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
-        
-        if(StringUtils.isBlank(sourceId)) {
+    public ServiceCallResult sendForEnrichment(File file, String sourceId, String mimeType, List<String> actions,
+            List<String> classes, String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
+
+        if (StringUtils.isBlank(sourceId)) {
             sourceId = getCustomUUID();
         }
 
@@ -412,7 +319,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
             String objectKey = serviceResponse.getString("objectKey");
             content.setObjectKey(objectKey);
 
-        // 3. Upload file to this URL
+            // 3. Upload file to this URL
             result = serviceCall.uploadFileWithPut(content.getFile(), presignedUrl, content.getMimeType());
             if (result.callFailed()) {
                 errMsg = "Failed uploading content ID <" + content.getSourceId() + ">, File name <\"\n"
@@ -426,7 +333,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
             content.setProcessingSuccess(true);
 
         }
-        
+
         // We need to cleanup and close() any potential CloseableFile fetched during the loop
         for (ContentToProcess content : contentObjects) {
             content.close();
@@ -493,7 +400,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
     @Override
     public ServiceCallResult enrich(Blob blob, List<String> actions, List<String> classes,
             String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
-        
+
         String sourceId = getCustomUUID();
 
         @SuppressWarnings("rawtypes")
@@ -537,7 +444,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
     @Override
     public ServiceCallResult enrich(File file, String mimeType, List<String> actions, List<String> classes,
             String similarMetadataJsonArrayStr, String extraJsonPayloadStr) throws IOException {
-        
+
         String sourceId = getCustomUUID();
 
         @SuppressWarnings("rawtypes")
@@ -569,7 +476,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         String putUrl = null;
 
         // ====================> 1. Get auth token
-        String bearer = fetchAuthTokenIfNeeded(CICService.DATA_CURATION);
+        String bearer = dataCurationAuthToken.getToken();
         if (StringUtils.isBlank(bearer)) {
             throw new NuxeoException("No authentication info for calling the Data Curation service.");
         }
@@ -665,7 +572,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
                         + pullResultsMaxTries + ")");
             }
 
-            String bearer = fetchAuthTokenIfNeeded(CICService.DATA_CURATION);
+            String bearer = dataCurationAuthToken.getToken();
             if (StringUtils.isBlank(bearer)) {
                 throw new NuxeoException("No authentication info for calling the Data Curation service.");
             }
@@ -711,7 +618,7 @@ public class HylandKEServiceImpl extends DefaultComponent implements HylandKESer
         ServiceCallResult result = null;
 
         // Get auth token
-        String bearer = fetchAuthTokenIfNeeded(CICService.ENRICHMENT);
+        String bearer = enrichmentAuthToken.getToken();
         if (StringUtils.isBlank(bearer)) {
             throw new NuxeoException("No authentication info for calling the Enrichment service.");
         }

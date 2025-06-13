@@ -16,7 +16,7 @@
  * Contributors:
  *     Thibaud Arguillere
  */
-package org.nuxeo.labs.knowledge.enrichment.http;
+package org.nuxeo.labs.hyland.knowledge.enrichment.http;
 
 import java.io.BufferedReader;
 import java.io.File;

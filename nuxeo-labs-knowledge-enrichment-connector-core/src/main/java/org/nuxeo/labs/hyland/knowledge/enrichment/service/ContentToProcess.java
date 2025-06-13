@@ -49,7 +49,7 @@ public class ContentToProcess<T> implements Closeable {
 
     protected Blob blob;
 
-    protected File file;
+    protected File file;                                                                
 
     protected CloseableFile closeableFile;
 
